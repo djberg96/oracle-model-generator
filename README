@@ -1,0 +1,21 @@
+= Description
+A library for generating an ActiveRecord model from an existing Oracle table.
+
+= Synopsis
+From the command line:
+
+generate_oracle_model --table users
+generate_oracle_model --view employees
+
+= Author's Comments
+I chose not to patch legacy_data because I have no interest in supporting
+other vendors other than Oracle with this library. By focusing only on
+Oracle I could take advantage of ruby-oci8 features. In addition, I have no
+interest in making this a Rails plugin, and I needed the support of multiple
+primary keys.
+
+= License
+Artistic 2.0
+
+= Author
+Daniel J. Berger

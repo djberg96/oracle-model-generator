@@ -1,0 +1,5 @@
+oracle-model-generator.gemspec
+Rakefile
+README
+lib/oracle/model/generator.rb
+test/test_oracle_model_generator.rb
