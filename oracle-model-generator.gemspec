@@ -14,6 +14,7 @@ Gem::Specification.new do |gem|
   gem.rubyforge_project = 'N/A'
   gem.extra_rdoc_files  = %w[CHANGES README MANIFEST]
 
+  gem.add_dependency('getopt', '>= 1.4.0')
   gem.add_development_dependency('test-unit', '>= 2.1.1')
 
   gem.description = <<-EOF
