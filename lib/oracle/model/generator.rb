@@ -11,6 +11,7 @@ module Oracle
       attr_reader :belongs_to
       attr_reader :table
       attr_reader :view
+      attr_reader :dependencies
 
       # Example:
       #
@@ -23,6 +24,7 @@ module Oracle
         @constraints  = []
         @primary_keys = []
         @foreign_keys = []
+        @dependencies = []
         @belongs_to   = []
         @table        = nil
       end
@@ -80,7 +82,7 @@ module Oracle
           cursor = @connection.exec(sql)
           fk = cursor.fetch.first
         ensure
-          cursor.close
+          cursor.close if cursor
         end
 
         fk
@@ -104,7 +106,7 @@ module Oracle
             @constraints << rec
           end
         ensure
-          cursor.close
+          cursor.close if cursor
         end
       end
     end
