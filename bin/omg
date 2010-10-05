@@ -70,8 +70,8 @@ unless user && pass
   begin
     dbrc = DBI::DBRC.new(opts['database'], user)
     user = dbrc.user
-    pass = dbrc.pass
-  rescue
+    pass = dbrc.passwd
+  rescue DBI::DBRC::Error
     msg = "No user or password provided, and no dbrc entry found for '"
     msg << opts['database'] + "'."
     puts msg
