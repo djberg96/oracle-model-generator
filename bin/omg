@@ -91,7 +91,9 @@ connection = OCI8.new(user, pass, opts['database'])
 omg = Oracle::Model::Generator.new(connection)
 omg.generate(table || view, view)
 
-File.open(table + '.rb', 'w') do |fh|
+ofile = opts['o'] || table + '.rb'
+
+File.open(ofile, 'w') do |fh|
   fh.puts "class #{omg.table} < ActiveRecord::Base"
   fh.puts "  set_table_name :#{table}"
 
