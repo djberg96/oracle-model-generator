@@ -1,18 +1,15 @@
 #!/usr/bin/env ruby
-Dir.chdir('..')
-$:.unshift 'lib'
 
 require 'oracle/model/generator'
-require 'dbi'
 require 'dbi/dbrc'
 require 'getopt/long'
 
 opts = Getopt::Long.getopts(
-  ['--table',    '-t'],
-  ['--view',     '-v'],
-  ['--user',     '-u'],
-  ['--password', '-p'],
   ['--help',     '-h'],
+  ['--table',    '-t', Getopt::REQUIRED],
+  ['--view',     '-v', Getopt::REQUIRED],
+  ['--user',     '-u', Getopt::REQUIRED],
+  ['--password', '-p', Getopt::REQUIRED],
   ['--database', '-d', Getopt::REQUIRED],
   ['--output',   '-o', Getopt::REQUIRED]
 )
@@ -61,17 +58,118 @@ unless opts['database']
   exit!
 end
 
+unless opts['table'] || opts['view']
+  puts "You must specify a table or view."
+  exit!
+end
+
 user = opts['user']
 pass = opts['password']
-dbrc = nil
 
-unless user && password
+unless user && pass
   begin
     dbrc = DBI::DBRC.new(opts['database'], user)
     user = dbrc.user
     pass = dbrc.pass
   rescue
-    "No user or password provided, and no dbrc entry found."
+    msg = "No user or password provided, and no dbrc entry found for '"
+    msg << opts['database'] + "'."
+    puts msg
     exit!
   end
+end
+
+table = opts['table']
+view  = opts['view']
+
+if table && view
+  puts "You cannot specify both a table and a view."
+  exit!
+end
+
+connection = OCI8.new(user, pass, opts['database'])
+omg = Oracle::Model::Generator.new(connection)
+omg.generate(table || view, view)
+
+File.open(table + '.rb', 'w') do |fh|
+  fh.puts "class #{omg.table} < ActiveRecord::Base"
+  fh.puts "  set_table_name :#{table}"
+
+  if omg.primary_keys.size > 1
+    fh.puts "\n  # Requires the composite-primary-keys library"
+    fh.puts "  set_primary_keys " + omg.primary_keys.inspect
+  else
+    fh.puts "\n  set_primary_key " + omg.primary_keys.first.to_sym.inspect
+  end
+
+  fh.puts "\n  # Table relationships\n\n"
+  omg.belongs_to.uniq.each{ |table|
+    fh.puts "  belongs_to :#{table.downcase}"
+  }
+
+  fh.puts "\n  # Validations\n\n"
+
+  # Character fields, size
+  omg.column_info.each{ |col|
+    data_type = col.data_type.to_s
+    if ['char', 'varchar', 'varchar2'].include?(data_type)
+      validation = "validates_size_of :#{col.name.downcase}, :maximum => #{col.data_size}"
+      validation << ", :allow_blank => #{col.nullable?}" if col.nullable?
+      fh.puts "  #{validation}"
+    end
+  }
+
+  fh.puts # Line break
+
+  # Fields that must be present
+  omg.column_info.each{ |col|
+    unless col.nullable?
+      validation = "validates_presence_of :#{col.name.downcase}"
+      fh.puts "  #{validation}"
+    end
+  }
+
+  fh.puts # Line break
+
+  # Numeric fields
+  omg.column_info.each{ |col|
+    if col.data_type.to_s == 'number'
+      max = ("9" * (col.precision - col.scale)).to_i
+
+      validation = "validates_numericality_of :#{col.name.downcase}"
+      validation << ", :less_than => #{max + 1}, :greater_than => -#{max + 1}"
+
+      if col.scale == 0
+        validation << ", :only_integer => true"
+      end
+
+      fh.puts "  #{validation}"
+    end
+  }
+
+  fh.puts # Line break
+  header_printed = false
+
+  # Date fields
+  omg.column_info.each{ |col|
+    data_type = col.data_type.to_s
+
+    if ['date', 'time'].include?(data_type)
+      if data_type == 'date'
+        validation = "validates_date :#{col.name.downcase}"
+      end
+
+      if data_type == 'timestamp'
+        validation = "validates_time :#{col.name.downcase}"
+      end
+
+      unless header_printed
+        fh.puts "  # Requires the validates_timeliness library"
+      end
+
+      fh.puts "  #{validation}"
+    end
+  }
+
+  fh.puts "end"
 end

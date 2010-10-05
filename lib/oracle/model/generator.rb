@@ -12,6 +12,8 @@ module Oracle
       attr_reader :table
       attr_reader :view
       attr_reader :dependencies
+      attr_reader :column_info
+      attr_reader :primary_keys
 
       # Example:
       #
@@ -26,20 +28,27 @@ module Oracle
         @foreign_keys = []
         @dependencies = []
         @belongs_to   = []
+        @column_info  = []
         @table        = nil
       end
 
       def generate(table, view = false)
-        @table = table
+        @table = table.split('_').map{ |e| e.downcase.capitalize }.join
         @view  = view
         get_constraints(table) unless view
         get_foreign_keys unless view
+        get_column_info(table) unless view
+        get_primary_keys
       end
 
       private
 
-      # Get the primary key. If there is more than one, then an array of
-      # keys are returned.
+      def get_column_info(table_name)
+        table = @connection.describe_table(table_name)
+        table.columns.each{ |col| @column_info << col }
+      end
+
+      # Returns an array of primary keys.
       #
       def get_primary_keys
         @constraints.each{ |hash|
@@ -47,12 +56,6 @@ module Oracle
             @primary_keys << hash['COLUMN_NAME'].downcase
           end
         }
-
-        if @primary_keys.size > 1
-          @primary_keys.map{ |e| e.to_sym }
-        else
-          @primary_keys[0].to_sym
-        end
       end
 
       def get_foreign_keys
@@ -109,6 +112,7 @@ module Oracle
           cursor.close if cursor
         end
       end
+
     end
   end
 end
