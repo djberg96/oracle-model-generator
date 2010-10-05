@@ -11,6 +11,7 @@ Gem::Specification.new do |gem|
   gem.test_file  = 'test/test_oracle_model_generator.rb'
   gem.files      = Dir['**/*'].reject{ |f| f.include?('git') }
 
+  gem.executables       = "omg"
   gem.rubyforge_project = 'N/A'
   gem.extra_rdoc_files  = %w[CHANGES README MANIFEST]
 
