@@ -6,7 +6,7 @@ Gem::Specification.new do |gem|
   gem.author     = 'Daniel J. Berger'
   gem.license    = 'Artistic 2.0'
   gem.email      = 'djberg96@gmail.com'
-  gem.homepage   = 'N/A'
+  gem.homepage   = 'http://www.github.com/djberg96/oracle-model-generator'
   gem.summary    = 'A Ruby interface for determining protocol information'
   gem.test_file  = 'test/test_oracle_model_generator.rb'
   gem.files      = Dir['**/*'].reject{ |f| f.include?('git') }

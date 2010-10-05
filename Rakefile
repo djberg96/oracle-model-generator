@@ -12,10 +12,6 @@ namespace 'gem' do
   desc 'Create the oracle-model-generator gem'
   task :create => :clean do
     spec = eval(IO.read('oracle-model-generator.gemspec'))
-    if Config::CONFIG['host_os'] =~ /linux/i
-      spec.require_path = 'lib/linux'
-      spec.platform = Gem::Platform::CURRENT
-    end
     Gem::Builder.new(spec).build
   end
 
