@@ -1,5 +1,8 @@
+CHANGES
+MANIFEST
+README
 oracle-model-generator.gemspec
 Rakefile
-README
+bin/omg
 lib/oracle/model/generator.rb
 test/test_oracle_model_generator.rb
