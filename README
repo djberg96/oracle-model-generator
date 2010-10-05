@@ -1,5 +1,6 @@
 = Description
 A library for generating an ActiveRecord model from an existing Oracle table.
+This will install an "omg" executable that you can use from the command line.
 
 = Synopsis
 Using the command line tool:
@@ -11,11 +12,19 @@ declaration, with all validations, primary keys, table name and belongs_to
 relationships defined.
 
 = Requirements
-The ruby-oci8 and getopt libraries are the only definitive requirements.
+== Must Have
+* ruby-oci8
+* getopt
+
+== Optional
+If you want to be able to avoid specifying a username and password on the
+command line then you will need the dbi-dbrc library.
 
 If you want your models to support multiple primary keys, then you will
-need to install the composite_primary_keys library. If you want date format
-validations, then you will need to install the validates_timeliness library.
+need to install the composite_primary_keys library.
+
+If you want date format validations, then you will need to install the
+validates_timeliness library.
 
 = What this library doesn't do
 I do not attempt to set has_many or has_one relationships. There's no good
