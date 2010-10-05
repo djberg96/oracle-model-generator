@@ -45,6 +45,9 @@ Oracle I could take advantage of ruby-oci8 features. In addition, I have no
 interest in making this a Rails plugin, and I needed the support of multiple
 primary keys.
 
+= Future Plans
+Add support for views.
+
 = Known Issues
 None known. If you find any issues, please report them on the github project
 page at http://www.github.com/djberg96/oracle-model-generator.
