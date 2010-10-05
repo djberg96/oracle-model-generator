@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+Dir.chdir('..')
+$:.unshift 'lib'
+
+require 'oracle/model/generator'
+require 'dbi'
+require 'dbi/dbrc'
+require 'getopt/long'
+
+opts = Getopt::Long.getopts(
+  ['--table',    '-t'],
+  ['--view',     '-v'],
+  ['--user',     '-u'],
+  ['--password', '-p'],
+  ['--help',     '-h'],
+  ['--database', '-d', Getopt::REQUIRED],
+  ['--output',   '-o', Getopt::REQUIRED]
+)
+
+def help
+  %Q{
+    Available options for the Oracle Model Generator are:
+
+    -h, --help     => Display the help text you're looking at now.
+    -t, --table    => The name of the table you wish to model.
+    -v, --view     => The name of the view you wish to model.
+    -o, --output   => The name of the file to create.
+    -u, --user     => The user used to establish a connection to the database.
+    -p, --password => The password used to establish a connection to the database.
+
+    If no user or password are supplied, then OMG will attempt to glean that
+    information using a combination of the database name and your .dbrc file.
+    If that cannot be found, then an error is raised.
+
+    If no output file is supplied then the file generated will match the name
+    of the table, minus the 's' if present, with a .rb extension. This is lazy,
+    but it is orders of magnitude easier for you to rename a file than it is
+    for me to deal with all possible permutations. Note that the output file
+    name is also used as the basis for the class name
+
+    Examples:
+
+    # Create a User model for the users table.
+    omg -d some_database -u scott -p tiger -t users
+
+    # Same thing, using dbi-dbrc behind the scenes
+    omg -d some_database -t users
+
+    # Create a Lily model for the lilies table, and specify the output file.
+    omg -d some_database -u scott -p tiger -t lilies -o lily.rb
+  }
+end
+
+if opts['h']
+  puts help
+  exit!
+end
+
+unless opts['database']
+  puts "You must specify a database."
+  exit!
+end
+
+user = opts['user']
+pass = opts['password']
+dbrc = nil
+
+unless user && password
+  begin
+    dbrc = DBI::DBRC.new(opts['database'], user)
+    user = dbrc.user
+    pass = dbrc.pass
+  rescue
+    "No user or password provided, and no dbrc entry found."
+    exit!
+  end
+end
