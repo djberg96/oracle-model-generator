@@ -175,3 +175,5 @@ File.open(ofile, 'w') do |fh|
 
   fh.puts "end"
 end
+
+puts "\nFile '#{ofile}' generated\n\n"
