@@ -3,7 +3,7 @@ require 'oci8'
 module Oracle
   module Model
     class Generator
-      VERSION = '0.1.0'
+      VERSION = '0.1.1'
 
       attr_reader :connection
       attr_reader :constraints
@@ -32,6 +32,13 @@ module Oracle
         @table        = nil
       end
 
+      # Generates an Oracle::Model::Generator object for +table+. If this is
+      # a view (materialized or otherwise), set the +view+ argument to true.
+      #
+      # This method does not actually generate a file of any sort. It merely
+      # sets instance variables which you can then use in your own class/file
+      # generation programs.
+      #
       def generate(table, view = false)
         @table = table.split('_').map{ |e| e.downcase.capitalize }.join
         @view  = view
@@ -58,6 +65,8 @@ module Oracle
         }
       end
 
+      # Returns an array of foreign keys.
+      #
       def get_foreign_keys
         @constraints.each{ |hash|
           if hash['CONSTRAINT_TYPE'] == 'R'
@@ -68,12 +77,17 @@ module Oracle
         get_belongs_to()
       end
 
+      # Returns an array of tables that the current table has foreign key
+      # ties to.
+      #
       def get_belongs_to
         @foreign_keys.each{ |fk|
           @belongs_to << find_fk_table(fk)
         }
       end
 
+      # Find table name based on a foreign key name.
+      #
       def find_fk_table(fk)
         sql = %Q{
           select table_name
@@ -83,12 +97,12 @@ module Oracle
 
         begin
           cursor = @connection.exec(sql)
-          fk = cursor.fetch.first
+          table = cursor.fetch.first
         ensure
           cursor.close if cursor
         end
 
-        fk
+        table
       end
 
       # Get a list of constraints for a given table.
