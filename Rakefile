@@ -1,14 +1,12 @@
 require 'rake'
 require 'rake/testtask'
+require 'rake/clean'
 require 'rbconfig'
 include Config
 
-namespace 'gem' do
-  desc 'Remove any old gem files'
-  task :clean do
-    Dir['*.gem'].each{ |f| File.delete(f) }
-  end
+CLEAN.include("**/*.gem", "**/*.rbc", "**/*.log")
 
+namespace 'gem' do
   desc 'Create the oracle-model-generator gem'
   task :create => :clean do
     spec = eval(IO.read('oracle-model-generator.gemspec'))
