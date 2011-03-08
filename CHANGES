@@ -1,2 +1,10 @@
+= 0.2.0 - 8-Mar-2011
+* Added the -r/--rails command line option. By default the omg binary will
+  now generate Rails 3 style validations. If you want Rails 2 validations,
+  specify "-r 2" on the command line.
+* The numericality validations are now more strict, and will match the
+  scale and precision exactly as defined instead of rounding to the nearest
+  whole number, for Rails 3 anyway.
+
 = 0.1.0 - 6-Oct-2010
 * Initial release.

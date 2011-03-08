@@ -47,6 +47,7 @@ primary keys.
 
 = Future Plans
 Add support for views.
+Add automatic test suite generation.
 
 = Known Issues
 None known. If you find any issues, please report them on the github project
@@ -58,7 +59,7 @@ implied warranties, including, without limitation, the implied
 warranties of merchantability and fitness for a particular purpose.
 
 = Copyright
-(C) 2010, Daniel J. Berger
+(C) 2010, 2011 Daniel J. Berger
 All Rights Reserved
 
 = License
