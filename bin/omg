@@ -16,8 +16,9 @@ opts = Getopt::Long.getopts(
 )
 
 def help
+  version = Oracle::Model::Generator::VERSION
   %Q{
-    Available options for the Oracle Model Generator are:
+    Available options for the Oracle Model Generator (version #{version}) are:
 
     -h, --help     => Display the help text you're looking at now.
     -t, --table    => The name of the table you wish to model.
