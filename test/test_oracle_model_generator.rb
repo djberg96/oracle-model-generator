@@ -13,7 +13,7 @@ class TC_Oracle_Model_Generator < Test::Unit::TestCase
   end
 
   test "version number is correct" do
-    assert_equal('0.1.0', Oracle::Model::Generator::VERSION)
+    assert_equal('0.2.0', Oracle::Model::Generator::VERSION)
   end
 
   test "constructor accepts an oci8 connection object" do
