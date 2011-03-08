@@ -11,7 +11,8 @@ opts = Getopt::Long.getopts(
   ['--user',     '-u', Getopt::REQUIRED],
   ['--password', '-p', Getopt::REQUIRED],
   ['--database', '-d', Getopt::REQUIRED],
-  ['--output',   '-o', Getopt::REQUIRED]
+  ['--output',   '-o', Getopt::REQUIRED],
+  ['--rails',    '-r', Getopt::REQUIRED]
 )
 
 def help
@@ -24,6 +25,7 @@ def help
     -o, --output   => The name of the file to create.
     -u, --user     => The user used to establish a connection to the database.
     -p, --password => The password used to establish a connection to the database.
+    -r, --rails    => The version of rails you're using (2 or 3).
 
     If no user or password are supplied, then OMG will attempt to glean that
     information using a combination of the database name and your .dbrc file.
@@ -37,8 +39,11 @@ def help
 
     Examples:
 
-    # Create a User model for the users table.
+    # Create a User model for the users table (rails 3)
     omg -d some_database -u scott -p tiger -t users
+
+    # Create a User model for the users table (rails 2)
+    omg -d some_database -r 2 -u scott -p tiger -t users
 
     # Same thing, using dbi-dbrc behind the scenes
     omg -d some_database -t users
@@ -93,6 +98,14 @@ omg.generate(table || view, view)
 
 ofile = opts['o'] || table + '.rb'
 
+# Default to Rails 3
+rails = (opts['rails'] && opts['rails'].to_i) || 3
+
+if rails < 2 || rails > 3
+  puts "Invalid version of Rails. Specify either 2 or 3."
+  exit!
+end
+
 File.open(ofile, 'w') do |fh|
   fh.puts "class #{omg.table} < ActiveRecord::Base"
   fh.puts "  set_table_name :#{table}"
@@ -111,43 +124,79 @@ File.open(ofile, 'w') do |fh|
 
   fh.puts "\n  # Validations\n\n"
 
-  # Character fields, size
-  omg.column_info.each{ |col|
-    data_type = col.data_type.to_s
-    if ['char', 'varchar', 'varchar2'].include?(data_type)
-      validation = "validates_size_of :#{col.name.downcase}, :maximum => #{col.data_size}"
-      validation << ", :allow_blank => #{col.nullable?}" if col.nullable?
-      fh.puts "  #{validation}"
-    end
-  }
+  if rails == 2
+    # Character fields, size
+    omg.column_info.each{ |col|
+      data_type = col.data_type.to_s
+      if ['char', 'varchar', 'varchar2'].include?(data_type)
+        validation = "validates_size_of :#{col.name.downcase}, :maximum => #{col.data_size}"
+        validation << ", :allow_blank => #{col.nullable?}" if col.nullable?
+        fh.puts "  #{validation}"
+      end
+    }
 
-  fh.puts # Line break
+    fh.puts # Line break
 
-  # Fields that must be present
-  omg.column_info.each{ |col|
-    unless col.nullable?
-      validation = "validates_presence_of :#{col.name.downcase}"
-      fh.puts "  #{validation}"
-    end
-  }
+    # Fields that must be present
+    omg.column_info.each{ |col|
+      unless col.nullable?
+        validation = "validates_presence_of :#{col.name.downcase}"
+        fh.puts "  #{validation}"
+      end
+    }
 
-  fh.puts # Line break
+    fh.puts # Line break
 
-  # Numeric fields
-  omg.column_info.each{ |col|
-    if col.data_type.to_s == 'number'
-      max = ("9" * (col.precision - col.scale)).to_i
+    # Numeric fields
+    omg.column_info.each{ |col|
+      if col.data_type.to_s == 'number'
+        max = ("9" * (col.precision - col.scale)).to_i
 
-      validation = "validates_numericality_of :#{col.name.downcase}"
-      validation << ", :less_than => #{max + 1}, :greater_than => -#{max + 1}"
+        validation = "validates_numericality_of :#{col.name.downcase}"
+        validation << ", :less_than => #{max + 1}, :greater_than => -#{max + 1}"
 
-      if col.scale == 0
-        validation << ", :only_integer => true"
+        if col.scale == 0
+          validation << ", :only_integer => true"
+        end
+
+        fh.puts "  #{validation}"
+      end
+    }
+  else
+    # Character fields, size
+    omg.column_info.each{ |col|
+
+      data_type = col.data_type.to_s
+
+      case data_type
+        when 'char', 'varchar', 'varchar2'
+          validation = "validates :#{col.name.downcase}, "
+          validation << ":length => {:maximum => #{col.data_size}}"
+          validation << ", :presence => #{!col.nullable?}" unless col.nullable?
+        when 'number'
+          max = "9" * col.precision
+          max.insert(col.precision - col.scale, ".") if col.scale > 0
+
+          validation = "\n  validates :#{col.name.downcase}, "
+
+          unless col.nullable?
+            validation << ":presence => #{!col.nullable?}, "
+          end
+
+          validation << ":numericality => {"
+          validation << "\n      :less_than_or_equal_to => #{max}, "
+          validation << "\n      :greater_than_or_equal_to => -#{max}"
+
+          if col.scale == 0
+            validation << ",\n      :only_integer => true"
+          end
+
+          validation << "\n    }"
       end
 
       fh.puts "  #{validation}"
-    end
-  }
+    }
+  end
 
   fh.puts # Line break
   header_printed = false
