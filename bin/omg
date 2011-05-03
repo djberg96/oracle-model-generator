@@ -1,8 +1,14 @@
 #!/usr/bin/env ruby
 
 require 'oracle/model/generator'
-require 'dbi/dbrc'
 require 'getopt/long'
+
+begin
+  require 'dbi/dbrc'
+rescue LoadError
+  # Do nothing. Users must specify username/password information on the
+  # command line via the -u and -p options.
+end
 
 opts = Getopt::Long.getopts(
   ['--help',     '-h'],
@@ -77,6 +83,12 @@ unless user && pass
     dbrc = DBI::DBRC.new(opts['database'], user)
     user = dbrc.user
     pass = dbrc.passwd
+  rescue NameError
+    msg = "If you do not specify a username or password on the command line "
+    msg << "then you must use the dbi-dbrc library and create a .dbrc file in "
+    msg << "your home directory."
+    puts msg
+    exit!
   rescue DBI::DBRC::Error
     msg = "No user or password provided, and no dbrc entry found for '"
     msg << opts['database'] + "'."
