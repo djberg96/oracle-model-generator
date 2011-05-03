@@ -87,6 +87,7 @@ primary keys.
 Add support for views.
 Add automatic test suite generation.
 Explicitly set :foreign_key if using CPK in belongs_to relationships.
+The output could use a little formatting love.
 
 = Known Issues
 None known. If you find any issues, please report them on the github project
