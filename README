@@ -5,11 +5,49 @@ This will install an "omg" executable that you can use from the command line.
 = Synopsis
 Using the command line tool:
 
-  omg -d your_database -t your_table -u some_user -p some_password
+  omg -d your_database -t locations -u some_user -p some_password
 
-Results in a file called "your_table.rb". This is an ActiveRecord model
+Results in a file called "locations.rb". This is an ActiveRecord model
 declaration, with all validations, primary keys, table name and belongs_to
 relationships defined.
+
+If your locations table looks like this:
+
+  create table locations(
+    location_id number(4,0) primary key,
+    street_address varchar2(40), 
+    postal_code varchar2(12),
+    city varchar2(30) not null
+    state_province varchar2(25),
+    country_id CHAR(2),
+    constraint "LOC_C_ID_FK" FOREIGN KEY (country_id)
+      references COUNTRIES (country_id)
+  )
+
+The omg library will generate this:
+
+  class Locations < ActiveRecord::Base
+    set_table_name :locations
+    set_primary_key :location_id
+
+    # Table relationships
+
+    belongs_to :countries
+
+    # Validations
+    
+    validates :location_id, :presence => true, :numericality => {
+      :less_than_or_equal_to => 9999, 
+      :greater_than_or_equal_to => -9999,
+      :only_integer => true
+    }
+
+    validates :street_address, :length => {:maximum => 40}
+    validates :postal_code, :length => {:maximum => 12}
+    validates :city, :length => {:maximum => 30}, :presence => true
+    validates :state_province, :length => {:maximum => 25}
+    validates :country_id, :length => {:maximum => 2}
+  end
 
 = Requirements
 == Must Have
@@ -48,6 +86,7 @@ primary keys.
 = Future Plans
 Add support for views.
 Add automatic test suite generation.
+Explicitly set :foreign_key if using CPK in belongs_to relationships.
 
 = Known Issues
 None known. If you find any issues, please report them on the github project

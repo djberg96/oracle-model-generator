@@ -1,3 +1,8 @@
+= 0.2.1 - 3-May-2011
+* Fixed a bug where the omg binary blew up if you didn't have the dbi-dbrc
+  library installed. It's supposed to be optional. Thanks go to Jason Roth
+  for the spot.
+
 = 0.2.0 - 8-Mar-2011
 * Added the -r/--rails command line option. By default the omg binary will
   now generate Rails 3 style validations. If you want Rails 2 validations,
