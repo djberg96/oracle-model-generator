@@ -13,7 +13,7 @@ class TC_Oracle_Model_Generator < Test::Unit::TestCase
   end
 
   test "version number is correct" do
-    assert_equal('0.2.1', Oracle::Model::Generator::VERSION)
+    assert_equal('0.3.0', Oracle::Model::Generator::VERSION)
   end
 
   test "constructor accepts an oci8 connection object" do
@@ -26,9 +26,23 @@ class TC_Oracle_Model_Generator < Test::Unit::TestCase
   end
 
   test "generate method works with a table name or view" do
-    assert_nothing_raised{ @generator = Oracle::Model::Generator.new(@connection) }
+    @generator = Oracle::Model::Generator.new(@connection)
     assert_nothing_raised{ @generator.generate('employees') }
     assert_nothing_raised{ @generator.generate('emp_details_view', true) }
+  end
+
+  test "model method returns active record model name" do
+    @generator = Oracle::Model::Generator.new(@connection)
+    @generator.generate('emp_details_view', true)
+    assert_respond_to(@generator, :model)
+    assert_equal('EmpDetailsView', @generator.model)
+  end
+
+  test "table method returns uppercased table name passed to generate method" do
+    @generator = Oracle::Model::Generator.new(@connection)
+    @generator.generate('emp_details_view', true)
+    assert_respond_to(@generator, :table)
+    assert_equal('EMP_DETAILS_VIEW', @generator.table)
   end
 
   def teardown

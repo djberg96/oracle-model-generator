@@ -3,18 +3,43 @@ require 'oci8'
 module Oracle
   module Model
     class Generator
-      VERSION = '0.2.1'
+      # The version of the oracle-model-generator library
+      VERSION = '0.3.0'
 
+      # The raw OCI8 connection.
       attr_reader :connection
+
+      # An array of hashes that contain per-column constraint information.
       attr_reader :constraints
+
+      # An array of foreign key names.
       attr_reader :foreign_keys
+
+      # An array of parent tables that the table has a foreign key
+      # relationship with.
       attr_reader :belongs_to
+
+      # The table name associated with the generator.
       attr_reader :table
+
+      # The name of the active record model to be generated.
+      attr_reader :model
+
+      # Boolean indicating whether the generator is for a regular table or a view.
       attr_reader :view
+
+      # A list of dependencies for the table.
       attr_reader :dependencies
+
+      # An array of raw OCI::Metadata::Column objects.
       attr_reader :column_info
+
+      # An array of primary keys for the column. May contain one or more values.
       attr_reader :primary_keys
 
+      # Creates and returns a new Oracle::Model::Generator object. It accepts
+      # an Oracle::Connection object, which is what OCI8.new returns.
+      #
       # Example:
       #
       #   connection = Oracle::Connection.new(user, password, database)
@@ -30,6 +55,7 @@ module Oracle
         @belongs_to   = []
         @column_info  = []
         @table        = nil
+        @model        = nil
       end
 
       # Generates an Oracle::Model::Generator object for +table+. If this is
@@ -40,18 +66,24 @@ module Oracle
       # generation programs.
       #
       def generate(table, view = false)
-        @table = table.split('_').map{ |e| e.downcase.capitalize }.join
+        @table = table.upcase
+        @model = table.split('_').map{ |e| e.downcase.capitalize }.join
         @view  = view
-        get_constraints(table) unless view
-        get_foreign_keys unless view
-        get_column_info(table) unless view
+
+        unless view
+          get_constraints
+          get_foreign_keys
+          get_column_info
+        end
+
         get_primary_keys
+        get_dependencies
       end
 
       private
 
-      def get_column_info(table_name)
-        table = @connection.describe_table(table_name)
+      def get_column_info
+        table = @connection.describe_table(@table)
         table.columns.each{ |col| @column_info << col }
       end
 
@@ -107,20 +139,39 @@ module Oracle
 
       # Get a list of constraints for a given table.
       #
-      def get_constraints(table_name)
+      def get_constraints
         sql = %Q{
           select *
           from all_cons_columns a, all_constraints b
           where a.owner = b.owner
           and a.constraint_name = b.constraint_name
           and a.table_name = b.table_name
-          and b.table_name = '#{table_name.upcase}'
+          and b.table_name = '#{@table}'
         }
 
         begin
           cursor = @connection.exec(sql)
           while rec = cursor.fetch_hash
             @constraints << rec
+          end
+        ensure
+          cursor.close if cursor
+        end
+      end
+
+      # An array of hashes indicating objects that are dependent on the table.
+      #
+      def get_dependencies
+        sql = %Q{
+          select *
+          from all_dependencies dep
+          where referenced_name = '#{@table}'
+        }
+
+        begin
+          cursor = @connection.exec(sql)
+          while rec = cursor.fetch_hash
+            @dependencies << rec
           end
         ensure
           cursor.close if cursor

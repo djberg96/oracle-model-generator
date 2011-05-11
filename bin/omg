@@ -120,7 +120,7 @@ if rails < 2 || rails > 3
 end
 
 File.open(ofile, 'w') do |fh|
-  fh.puts "class #{omg.table} < ActiveRecord::Base"
+  fh.puts "class #{omg.model} < ActiveRecord::Base"
   fh.puts "  set_table_name :#{table}"
 
   if omg.primary_keys.size > 1
@@ -237,5 +237,7 @@ File.open(ofile, 'w') do |fh|
 
   fh.puts "end"
 end
+
+omg.connection.logoff if omg.connection
 
 puts "\nFile '#{ofile}' generated\n\n"
