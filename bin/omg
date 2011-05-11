@@ -18,7 +18,8 @@ opts = Getopt::Long.getopts(
   ['--password', '-p', Getopt::REQUIRED],
   ['--database', '-d', Getopt::REQUIRED],
   ['--output',   '-o', Getopt::REQUIRED],
-  ['--rails',    '-r', Getopt::REQUIRED]
+  ['--rails',    '-r', Getopt::REQUIRED],
+  ['--test',     '-x', Getopt::OPTIONAL]
 )
 
 def help
@@ -33,6 +34,7 @@ def help
     -u, --user     => The user used to establish a connection to the database.
     -p, --password => The password used to establish a connection to the database.
     -r, --rails    => The version of rails you're using (2 or 3).
+    -x, --tests    => Generate tests (the default).
 
     If no user or password are supplied, then OMG will attempt to glean that
     information using a combination of the database name and your .dbrc file.
@@ -43,6 +45,10 @@ def help
     but it is orders of magnitude easier for you to rename a file than it is
     for me to deal with all possible permutations. Note that the output file
     name is also used as the basis for the class name
+
+    If no tests option is specified then a test file, using test-unit 2, will
+    be generated that includes some basic tests to backup the builtin
+    validations. Legal options are 'testunit', 'rspec', or 'none'.
 
     Examples:
 
@@ -191,7 +197,9 @@ File.open(ofile, 'w') do |fh|
         when 'char', 'varchar', 'varchar2'
           validation = "validates :#{col.name.downcase}, "
           validation << ":length => {:maximum => #{col.data_size}}"
-          validation << ", :presence => #{!col.nullable?}" unless col.nullable?
+          validation << ",\n    :format => { :with => /[:alpha]/, :message => 'is not a string' }"
+          validation << ",\n    :presence => #{!col.nullable?}" unless col.nullable?
+          validation << "\n\n"
         when 'number'
           max = "9" * col.precision
           max.insert(col.precision - col.scale, ".") if col.scale > 0
@@ -210,7 +218,7 @@ File.open(ofile, 'w') do |fh|
             validation << ",\n    :only_integer => true"
           end
 
-          validation << "\n  }"
+          validation << "\n  }\n\n"
       end
 
       fh.puts "  #{validation}"
@@ -242,6 +250,133 @@ File.open(ofile, 'w') do |fh|
   }
 
   fh.puts "end"
+end
+
+if opts['x'].nil? || opts['x'] == 'testunit'
+  test_file = "test_#{ofile}"
+  File.open(test_file, "w") do |fh|
+    setup_var = omg.table.downcase
+    setup_var.chop! if setup_var[-1].chr.downcase == 's'  
+    instance_var = "@#{setup_var}"
+
+    fh.puts "class TC_#{omg.model} < Test::Unit::TestCase\n"
+    fh.puts "  def setup"
+    fh.puts "    #{instance_var} = #{omg.model}.new"
+    fh.puts "  end\n\n"
+
+    fh.puts "  test 'table name is #{omg.table.downcase}' do"
+    fh.puts "    assert_equal('#{omg.table.downcase}', #{omg.model}.table_name)"
+    fh.puts "  end\n\n"
+
+    if omg.primary_keys.size > 1
+      test_string = "  test 'primary keys are #{omg.primary_keys.join(', ')}' do"
+      fh.puts test_string
+      fh.puts "    assert_equal('#{omg.primary_keys.join(', ')}', #{omg.model}.primary_keys)"
+    else
+      test_string = "  test 'primary key is #{omg.primary_keys.first}' do"
+      fh.puts test_string
+      fh.puts "    assert_equal('#{omg.primary_keys.first}', #{omg.model}.primary_key)"
+    end
+
+    fh.puts "  end\n"
+
+    omg.column_info.each{ |col|
+      data_type = col.data_type.to_s
+      column    = col.name.downcase
+
+      fh.puts "\n  test '#{column} basic functionality' do"
+      fh.puts "    assert_respond_to(#{instance_var}, :#{column})"
+      fh.puts "    assert_nothing_raised{ #{instance_var}.#{column} }"
+
+      case data_type
+        when 'char', 'varchar', 'varchar2'
+          fh.puts "    assert_kind_of(String, #{instance_var}.#{column})"
+        when 'number'
+          fh.puts "    assert_kind_of(Numeric, #{instance_var}.#{column})"
+        when 'date'
+          fh.puts "    assert_kind_of(DateTime, #{instance_var}.#{column})"
+      end
+
+      fh.puts "  end\n"
+
+      case data_type
+        when 'char', 'varchar', 'varchar2'
+          test_title = "\n  test '#{column} must be a string"
+          test_title += " if present" if col.nullable?
+          test_title += "' do"
+
+          fh.puts test_title
+          fh.puts "    #{instance_var}.#{column} = #{rand(100)}"
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+          fh.puts "  end\n"
+
+          max_len = col.data_size
+          err_msg = "is too long (maximum is #{max_len} characters"
+
+          fh.puts "\n  test '#{column} cannot exceed #{max_len} characters' do"
+          fh.puts "    #{instance_var}.#{column} = 'a' * #{max_len + 1}"
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          fh.puts "  end\n"
+        when 'number'
+          test_title = "\n  test '#{column} must be a number"
+          test_title += " if present" if col.nullable?
+          test_title += "' do"
+
+          fh.puts test_title
+          fh.puts "    #{instance_var}.#{column} = 'test_string'"
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+          fh.puts "  end\n"
+
+          max = "9" * col.precision
+          max.insert(col.precision - col.scale, ".") if col.scale > 0
+          err_msg = "must be less than or equal to #{max}"
+
+          fh.puts "\n  test '#{column} cannot exceed the value #{max}' do"
+
+          if col.scale > 0
+            fh.puts "    #{instance_var}.#{column} = #{max.to_f.round}"
+          else
+            fh.puts "    #{instance_var}.#{column} = #{max.to_i + 1}"
+          end
+
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          fh.puts "  end\n"
+
+          err_msg = "must be greater than or equal to -#{max}"
+
+          fh.puts "\n  test '#{column} cannot be less than the value -#{max}' do"
+
+          if col.scale > 0
+            fh.puts "    #{instance_var}.#{column} = -#{max.to_f.round}"
+          else
+            fh.puts "    #{instance_var}.#{column} = -#{max.to_i + 1}"
+          end
+
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          fh.puts "  end\n"
+      end
+    }
+
+    fh.puts "\n  def teardown"
+    fh.puts "     @#{setup_var} = nil"
+    fh.puts "  end"
+
+    fh.puts "end"
+  end
+  puts "\nTest file '#{test_file}' generated\n"
+else
+  if opts['x'] == 'rspec'
+    puts "\nrspec not yet supported for generating tests.\n"
+  elsif opts['x'] != 'none'
+    puts "\nInvalid option to -x/--tests: " + opts['x']
+  else
+    puts "\nSkipping test file genertion.\n"
+  end 
 end
 
 omg.connection.logoff if omg.connection
