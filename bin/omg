@@ -135,7 +135,7 @@ File.open(ofile, 'w') do |fh|
     fh.puts "  belongs_to :#{table.downcase}"
   }
 
-  fh.puts "\n  # Validations\n\n"
+  fh.puts "\n  # Validations\n"
 
   if rails == 2
     # Character fields, size
@@ -197,14 +197,14 @@ File.open(ofile, 'w') do |fh|
           end
 
           validation << ":numericality => {"
-          validation << "\n      :less_than_or_equal_to => #{max}, "
-          validation << "\n      :greater_than_or_equal_to => -#{max}"
+          validation << "\n    :less_than_or_equal_to => #{max}, "
+          validation << "\n    :greater_than_or_equal_to => -#{max}"
 
           if col.scale == 0
-            validation << ",\n      :only_integer => true"
+            validation << ",\n    :only_integer => true"
           end
 
-          validation << "\n    }"
+          validation << "\n  }"
       end
 
       fh.puts "  #{validation}"

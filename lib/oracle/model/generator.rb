@@ -64,11 +64,18 @@ module Oracle
       # This method does not actually generate a file of any sort. It merely
       # sets instance variables which you can then use in your own class/file
       # generation programs.
+      #--
+      # Makes a best guess as to the model name. I'm not going to put too much
+      # effort into this. It's much easier for you to hand edit a class name
+      # than it is for me to parse English.
       #
       def generate(table, view = false)
         @table = table.upcase
         @model = table.split('_').map{ |e| e.downcase.capitalize }.join
         @view  = view
+
+        # Remove trailing 's'
+        @model.chop! if @model[-1].chr.upcase == 'S'
 
         unless view
           get_constraints
