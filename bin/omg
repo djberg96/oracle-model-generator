@@ -109,7 +109,13 @@ connection = OCI8.new(user, pass, opts['database'])
 omg = Oracle::Model::Generator.new(connection)
 omg.generate(table || view, view)
 
-ofile = opts['o'] || table + '.rb'
+ofile = opts['o']
+
+unless ofile
+  ofile = omg.table.downcase
+  ofile.chop! if ofile[-1].chr.upcase == 'S'
+  ofile += '.rb'
+end
 
 # Default to Rails 3
 rails = (opts['rails'] && opts['rails'].to_i) || 3
