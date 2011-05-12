@@ -1,3 +1,10 @@
+#############################################################################
+# test_oracle_model_generator.rb
+#
+# Test suite for the oracle-model-generator library. For testing purposes
+# I'm using the 'hr' database that comes as part of the Oracle Express
+# edition which you can download from oracle.com. Adjust as necessary.
+#############################################################################
 require 'rubygems'
 gem 'test-unit'
 require 'test/unit'
@@ -43,6 +50,14 @@ class TC_Oracle_Model_Generator < Test::Unit::TestCase
     @generator.generate('emp_details_view', true)
     assert_respond_to(@generator, :table)
     assert_equal('EMP_DETAILS_VIEW', @generator.table)
+  end
+
+  test "dependencies method returns an array of hashes" do
+    @generator = Oracle::Model::Generator.new(@connection)
+    @generator.generate('employees', true)
+    assert_respond_to(@generator, :dependencies)
+    assert_kind_of(Array, @generator.dependencies)
+    assert_kind_of(Hash, @generator.dependencies.first)
   end
 
   def teardown
