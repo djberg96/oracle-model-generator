@@ -19,7 +19,7 @@ opts = Getopt::Long.getopts(
   ['--database', '-d', Getopt::REQUIRED],
   ['--output',   '-o', Getopt::REQUIRED],
   ['--rails',    '-r', Getopt::REQUIRED],
-  ['--test',     '-x', Getopt::OPTIONAL]
+  ['--tests',     '-x', Getopt::OPTIONAL]
 )
 
 def help
@@ -272,7 +272,7 @@ if opts['x'].nil? || opts['x'] == 'testunit'
     # that ships as part of the Ruby standard library.
     fh.puts "require 'rubygems'"
     fh.puts "gem 'test-unit'"
-    fh.puts "require 'test/unit'\n"
+    fh.puts "require 'test/unit'\n\n"
 
     fh.puts "class TC_#{omg.model} < Test::Unit::TestCase\n"
     fh.puts "  def setup"
@@ -318,9 +318,9 @@ if opts['x'].nil? || opts['x'] == 'testunit'
           end
         when 'date'
           if col.nullable?
-            fh.puts "    assert_kind_of([NilClass, DateTime], #{instance_var}.#{column})"
+            fh.puts "    assert_kind_of([NilClass, DateTime, Time], #{instance_var}.#{column})"
           else
-            fh.puts "    assert_kind_of(DateTime, #{instance_var}.#{column})"
+            fh.puts "    assert_kind_of([DateTime, Time], #{instance_var}.#{column})"
           end
       end
 
@@ -386,6 +386,15 @@ if opts['x'].nil? || opts['x'] == 'testunit'
           fh.puts "    assert_false(#{instance_var}.valid?)"
           fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
           fh.puts "  end\n"
+      end
+
+      unless col.nullable?
+        err_msg = "can't be blank"
+        fh.puts "\n  test '#{column} cannot be nil' do"
+          fh.puts "    #{instance_var}.#{column} = nil"
+          fh.puts "    assert_false(#{instance_var}.valid?)"
+          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+        fh.puts "  end\n"
       end
     }
 
