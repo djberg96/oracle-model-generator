@@ -1,4 +1,4 @@
-= 0.3.0 - ???
+= 0.3.0 - 12-May-2011
 * Added automatic test generation. In addition to the active record model file,
   a test file will be generated that includes a series of stock tests that
   are based on the model's validations. At the moment only test-unit is

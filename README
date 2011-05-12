@@ -49,6 +49,43 @@ The omg library will generate this:
     validates :country_id, :length => {:maximum => 2}
   end
 
+  It will also generate a corresponding test file using test-unit 2 by default.
+  For the above example you will see some tests like this:
+
+class TC_Location < Test::Unit::TestCase
+  def setup
+    @location = Location.new
+  end
+
+  test 'table name is locations' do
+    assert_equal('locations', Location.table_name)
+  end
+
+  test 'primary key is location_id' do
+    assert_equal('location_id', Location.primary_key)
+  end
+
+  test 'location_id basic functionality' do
+    assert_respond_to(@location, :location_id)
+    assert_nothing_raised{ @location.location_id }
+    assert_kind_of(Numeric, @location.location_id)
+  end
+
+  test 'location_id must be a number' do
+    @location.location_id = 'test_string'
+    assert_false(@location.valid?)
+    assert_true(@location.errors[:location_id].include?('is not a number'))
+  end
+
+  test 'location_id cannot exceed the value 9999' do
+    @location.location_id = 10000
+    assert_false(@location.valid?)
+    assert_true(@location.errors[:location_id].include?('must be less than or equal to 9999'))
+  end
+
+  # ... and so on.
+end
+
 = Requirements
 == Must Have
 * ruby-oci8
@@ -85,7 +122,7 @@ primary keys.
 
 = Future Plans
 Add support for views.
-Add automatic test suite generation.
+Add automatic test suite generation for rspec.
 Explicitly set :foreign_key if using CPK in belongs_to relationships.
 The output could use a little formatting love.
 
