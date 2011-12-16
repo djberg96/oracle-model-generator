@@ -7,11 +7,11 @@ Using the command line tool:
 
   omg -d your_database -t locations -u some_user -p some_password
 
-Results in a file called "locations.rb". This is an ActiveRecord model
-declaration, with all validations, primary keys, table name and belongs_to
-relationships defined.
+The above command results in a file called "location.rb". This is an
+ActiveRecord model declaration, with all validations, primary keys,
+table name and belongs_to relationships defined.
 
-If your locations table looks like this:
+If your LOCATIONS table looks like this:
 
   create table locations(
     location_id number(4,0) primary key,
@@ -26,7 +26,7 @@ If your locations table looks like this:
 
 The omg library will generate this:
 
-  class Locations < ActiveRecord::Base
+  class Location < ActiveRecord::Base
     set_table_name :locations
     set_primary_key :location_id
 
