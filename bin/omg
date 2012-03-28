@@ -218,23 +218,23 @@ File.open(ofile, 'w') do |fh|
           max = "9" * col.precision
           max.insert(col.precision - col.scale, ".") if col.scale > 0
 
-          validation = "\n  validates :#{col.name.downcase}, "
+          validation = "\n  validates :#{col.name.downcase}"
 
           unless col.nullable?
-            validation << ":presence => #{!col.nullable?}"
+            validation << ", :presence => #{!col.nullable?}"
           end
 
-        unless max.empty?
-          validation << ", :numericality => {"
-          validation << "\n    :less_than_or_equal_to => #{max}, " 
-          validation << "\n    :greater_than_or_equal_to => -#{max}" 
+          unless max.empty?
+            validation << ", :numericality => {"
+            validation << "\n    :less_than_or_equal_to => #{max}, " 
+            validation << "\n    :greater_than_or_equal_to => -#{max}" 
 
-          if col.scale == 0
-            validation << ",\n    :only_integer => true"
+            if col.scale == 0
+              validation << ",\n    :only_integer => true"
+            end
+
+            validation << "\n  }\n\n"
           end
-
-          validation << "\n  }\n\n"
-        end
 
       end
 
