@@ -11,6 +11,7 @@ rescue LoadError
 end
 
 opts = Getopt::Long.getopts(
+
   ['--help',     '-h'],
   ['--table',    '-t', Getopt::REQUIRED],
   ['--view',     '-v', Getopt::REQUIRED],
@@ -19,7 +20,8 @@ opts = Getopt::Long.getopts(
   ['--database', '-d', Getopt::REQUIRED],
   ['--output',   '-o', Getopt::REQUIRED],
   ['--rails',    '-r', Getopt::REQUIRED],
-  ['--tests',     '-x', Getopt::OPTIONAL]
+  ['--tests',    '-x', Getopt::OPTIONAL],
+  ['--class',    '-c', Getopt::OPTIONAL]
 )
 
 def help
@@ -35,6 +37,7 @@ def help
     -p, --password => The password used to establish a connection to the database.
     -r, --rails    => The version of rails you're using (2 or 3).
     -x, --tests    => Generate tests (the default).
+    -c, --class    => Class name for the generated table (optional)
 
     If no user or password are supplied, then OMG will attempt to glean that
     information using a combination of the database name and your .dbrc file.
@@ -130,16 +133,18 @@ if rails < 2 || rails > 3
   puts "Invalid version of Rails. Specify either 2 or 3."
   exit!
 end
+  
+omg.instance_eval { @model = opts['class'] } if opts['class'] # dirty fix
 
 File.open(ofile, 'w') do |fh|
   fh.puts "class #{omg.model} < ActiveRecord::Base"
-  fh.puts "  set_table_name :#{table}"
+  fh.puts "  set_table_name :\"#{table}\""
 
   if omg.primary_keys.size > 1
     fh.puts "\n  # Requires the composite-primary-keys library"
     fh.puts "  set_primary_keys " + omg.primary_keys.inspect
   else
-    fh.puts "\n  set_primary_key " + omg.primary_keys.first.to_sym.inspect
+    fh.puts "\n  set_primary_key " + omg.primary_keys.first.to_sym.inspect unless omg.primary_keys.first.nil?
   end
 
   fh.puts "\n  # Table relationships\n\n"
@@ -213,21 +218,24 @@ File.open(ofile, 'w') do |fh|
           max = "9" * col.precision
           max.insert(col.precision - col.scale, ".") if col.scale > 0
 
-          validation = "\n  validates :#{col.name.downcase}, "
+          validation = "\n  validates :#{col.name.downcase}"
 
           unless col.nullable?
-            validation << ":presence => #{!col.nullable?}, "
+            validation << ", :presence => #{!col.nullable?}"
           end
 
-          validation << ":numericality => {"
-          validation << "\n    :less_than_or_equal_to => #{max}, "
-          validation << "\n    :greater_than_or_equal_to => -#{max}"
+          unless max.empty?
+            validation << ", :numericality => {"
+            validation << "\n    :less_than_or_equal_to => #{max}, " 
+            validation << "\n    :greater_than_or_equal_to => -#{max}" 
 
-          if col.scale == 0
-            validation << ",\n    :only_integer => true"
+            if col.scale == 0
+              validation << ",\n    :only_integer => true"
+            end
+
+            validation << "\n  }\n\n"
           end
 
-          validation << "\n  }\n\n"
       end
 
       fh.puts "  #{validation}"
