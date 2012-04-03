@@ -111,7 +111,8 @@ application.
 I also do not go out of my way to get the model name correct with regards
 to singular vs plural. I do a simple guess that covers most cases, but
 complex cases will break it. It's much easier for you to rename a class or
-file name than it is for me to get this 100% correct.
+file name than it is for me to get this 100% correct. As of 0.3.1 there's
+also the --class option that let's you eplicitly set it if you like.
 
 = Author's Comments
 I chose not to patch legacy_data because I have no interest in supporting
@@ -126,6 +127,9 @@ Add automatic test suite generation for rspec.
 Explicitly set :foreign_key if using CPK in belongs_to relationships.
 The output could use a little formatting love.
 
+= Acknowlegements
+Thanks go to Daniel Luna for his --class patch.
+
 = Known Issues
 None known. If you find any issues, please report them on the github project
 page at http://www.github.com/djberg96/oracle-model-generator.
@@ -136,7 +140,7 @@ implied warranties, including, without limitation, the implied
 warranties of merchantability and fitness for a particular purpose.
 
 = Copyright
-(C) 2010, 2011 Daniel J. Berger
+(C) 2010-2012 Daniel J. Berger
 All Rights Reserved
 
 = License
