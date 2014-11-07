@@ -138,7 +138,7 @@ omg.instance_eval { @model = opts['class'] } if opts['class'] # dirty fix
 
 File.open(ofile, 'w') do |fh|
   fh.puts "class #{omg.model} < ActiveRecord::Base"
-  fh.puts "  set_table_name :\"#{table}\""
+  fh.puts "  set_table_name \"#{table}\""
 
   if omg.primary_keys.size > 1
     fh.puts "\n  # Requires the composite-primary-keys library"
