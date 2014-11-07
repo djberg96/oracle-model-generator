@@ -272,7 +272,10 @@ end
 
 opts['x'] ||= 'testunit' # Default
 
-if opts['x'] == 'testunit' || opts['x'] == 'minitest'
+testunit = opts['x'] == 'testunit'
+minitest = opts['x'] == 'minitest'
+
+if testunit || minitest
   test_file = "test_#{ofile}"
 
   File.open(test_file, "w") do |fh|
@@ -280,13 +283,13 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
     setup_var.chop! if setup_var[-1].chr.downcase == 's'  
     instance_var = "@#{setup_var}"
 
-    if opts['x'] == 'testunit'
+    if testunit
       fh.puts "require 'test-unit'\n\n"
     else
       fh.puts "require 'minitest/autorun'\n\n"
     end
 
-    if opts['x'] == 'testunit'
+    if testunit
       fh.puts "class TC_#{omg.model} < Test::Unit::TestCase\n"
     else
       fh.puts "class TC_#{omg.model} < Minitest::Unit::TestCase\n"
@@ -296,7 +299,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
     fh.puts "    #{instance_var} = #{omg.model}.new"
     fh.puts "  end\n\n"
 
-    if opts['x'] == 'testunit'
+    if testunit
       fh.puts "  test 'table name is #{omg.table.downcase}' do"
     else
       fh.puts "  def table_name_is_#{omg.table.downcase}"
@@ -305,7 +308,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
     fh.puts "  end\n\n"
 
     if omg.primary_keys.size > 1
-      if opts['x'] == 'testunit'
+      if testunit
         test_string = "  test 'primary keys are #{omg.primary_keys.join(', ')}' do"
       else
         test_string = "  def test_primary_keys_are_#{omg.primary_keys.join('_')}"
@@ -313,7 +316,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
       fh.puts test_string
       fh.puts "    assert_equal('#{omg.primary_keys.join(', ')}', #{omg.model}.primary_keys)"
     else
-      if opts['x'] == 'testunit'
+      if testunit
         test_string = "  test 'primary key is #{omg.primary_keys.first}' do"
       else
         test_string = "  def test_primary_key_is_#{omg.primary_keys.first}"
@@ -328,13 +331,13 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
       data_type = col.data_type.to_s
       column    = col.name.downcase
 
-      if opts['x'] == 'testunit'
+      if testunit
         fh.puts "\n  test '#{column} basic functionality' do"
       else
         fh.puts "\n  def test_#{column}_basic_functionality"
       end
       fh.puts "    assert_respond_to(#{instance_var}, :#{column})"
-      fh.puts "    assert_nothing_raised{ #{instance_var}.#{column} }" if opts['x'] == 'testunit'
+      fh.puts "    assert_nothing_raised{ #{instance_var}.#{column} }" if testunit
 
       case data_type
         when 'char', 'varchar', 'varchar2'
@@ -361,7 +364,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
 
       case data_type
         when 'char', 'varchar', 'varchar2'
-          if opts['x'] == 'testunit'
+          if testunit
             test_title = "\n  test '#{column} must be a string"
             test_title += " if present" if col.nullable?
             test_title += "' do"
@@ -379,7 +382,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
           max_len = col.data_size
           err_msg = "is too long (maximum is #{max_len} characters)"
 
-          if opts['x'] == 'testunit'
+          if testunit
             fh.puts "\n  test '#{column} cannot exceed #{max_len} characters' do"
           else
             fh.puts "\n  def test_#{column}_cannot_exceed_#{max_len}_characters"
@@ -389,7 +392,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
           fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
           fh.puts "  end\n"
         when 'number'
-          if opts['x'] == 'testunit'
+          if testunit
             test_title = "\n  test '#{column} must be a number"
             test_title += " if present" if col.nullable?
             test_title += "' do"
@@ -408,7 +411,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
           max.insert(col.precision - col.scale, ".") if col.scale > 0
           err_msg = "must be less than or equal to #{max}"
 
-          if opts['x'] == 'testunit'
+          if testunit
             fh.puts "\n  test '#{column} cannot exceed the value #{max}' do"
           else
             fh.puts "\n  def test_#{column}_cannot_exceed_the_value_#{max.sub('.', '_')}"
@@ -426,7 +429,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
 
           err_msg = "must be greater than or equal to -#{max}"
 
-          if opts['x'] == 'testunit'
+          if testunit
             fh.puts "\n  test '#{column} cannot be less than the value -#{max}' do"
           else
             fh.puts "\n  def test_#{column}_cannot_be_less_than_the_value_#{max.sub('.', '_')}"
@@ -445,7 +448,7 @@ if opts['x'] == 'testunit' || opts['x'] == 'minitest'
 
       unless col.nullable?
         err_msg = "can't be blank"
-        if opts['x'] == 'testunit'
+        if testunit
           fh.puts "\n  test '#{column} cannot be nil' do"
         else
           fh.puts "\n  def test_#{column}_cannot_be_nil"
