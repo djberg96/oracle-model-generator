@@ -35,7 +35,7 @@ def help
     -o, --output   => The name of the file to create.
     -u, --user     => The user used to establish a connection to the database.
     -p, --password => The password used to establish a connection to the database.
-    -r, --rails    => The version of rails you're using (2 or 3).
+    -r, --rails    => The version of rails you're using (2 or higher).
     -x, --tests    => Generate tests (the default).
     -c, --class    => Class name for the generated table (optional)
 
@@ -55,7 +55,7 @@ def help
 
     Examples:
 
-    # Create a User model for the users table (rails 3)
+    # Create a User model for the users table (current rails)
     omg -d some_database -u scott -p tiger -t users
 
     # Create a User model for the users table (rails 2)
@@ -126,11 +126,11 @@ unless ofile
   ofile += '.rb'
 end
 
-# Default to Rails 3
-rails = (opts['rails'] && opts['rails'].to_i) || 3
+# Default to Rails 4
+rails = (opts['rails'] && opts['rails'].to_i) || 4
 
-if rails < 2 || rails > 3
-  puts "Invalid version of Rails. Specify either 2 or 3."
+if rails < 2
+  puts "Invalid version of Rails. Must be 2 or higher."
   exit!
 end
   
@@ -276,11 +276,7 @@ if opts['x'].nil? || opts['x'] == 'testunit'
     setup_var.chop! if setup_var[-1].chr.downcase == 's'  
     instance_var = "@#{setup_var}"
 
-    # This bit is necessary to force test-unit 2 instead of using the library
-    # that ships as part of the Ruby standard library.
-    fh.puts "require 'rubygems'"
-    fh.puts "gem 'test-unit'"
-    fh.puts "require 'test/unit'\n\n"
+    fh.puts "require 'test-unit'\n\n"
 
     fh.puts "class TC_#{omg.model} < Test::Unit::TestCase\n"
     fh.puts "  def setup"
