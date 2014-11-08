@@ -342,21 +342,37 @@ if testunit || minitest
       case data_type
         when 'char', 'varchar', 'varchar2'
           if col.nullable?
-            fh.puts "    assert_kind_of([NilClass, String], #{instance_var}.#{column})"
+            if testunit
+              fh.puts "    assert_kind_of([NilClass, String], #{instance_var}.#{column})"
+            else
+              fh.puts "    assert([NilClass, String].include?(#{instance_var}.#{column}.class))"
+            end
           else
             fh.puts "    assert_kind_of(String, #{instance_var}.#{column})"
           end
         when 'number'
           if col.nullable?
-            fh.puts "    assert_kind_of([NilClass, Numeric], #{instance_var}.#{column})"
+            if testunit
+              fh.puts "    assert_kind_of([NilClass, Numeric], #{instance_var}.#{column})"
+            else
+              fh.puts "    assert([NilClass, Numeric].include?(#{instance_var}.#{column}.class))"
+            end
           else
             fh.puts "    assert_kind_of(Numeric, #{instance_var}.#{column})"
           end
         when 'date'
-          if col.nullable?
-            fh.puts "    assert_kind_of([NilClass, DateTime, Time], #{instance_var}.#{column})"
+          if testunit
+            if col.nullable?
+              fh.puts "    assert_kind_of([NilClass, DateTime, Time], #{instance_var}.#{column})"
+            else
+              fh.puts "    assert_kind_of([DateTime, Time], #{instance_var}.#{column})"
+            end
           else
-            fh.puts "    assert_kind_of([DateTime, Time], #{instance_var}.#{column})"
+            if col.nullable?
+              fh.puts "    assert([NilClass, DateTime, Time].include?(#{instance_var}.#{column}.class))"
+            else
+              fh.puts "    assert([DateTime, Time].include?(#{instance_var}.#{column}.class))"
+            end
           end
       end
 
@@ -375,8 +391,13 @@ if testunit || minitest
 
           fh.puts test_title
           fh.puts "    #{instance_var}.#{column} = #{rand(100)}"
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+          end
           fh.puts "  end\n"
 
           max_len = col.data_size
@@ -387,9 +408,16 @@ if testunit || minitest
           else
             fh.puts "\n  def test_#{column}_cannot_exceed_#{max_len}_characters"
           end
+
           fh.puts "    #{instance_var}.#{column} = 'a' * #{max_len + 1}"
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          end
           fh.puts "  end\n"
         when 'number'
           if testunit
@@ -403,8 +431,15 @@ if testunit || minitest
 
           fh.puts test_title
           fh.puts "    #{instance_var}.#{column} = 'test_string'"
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+          end
+
           fh.puts "  end\n"
 
           max = "9" * col.precision
@@ -423,8 +458,14 @@ if testunit || minitest
             fh.puts "    #{instance_var}.#{column} = #{max.to_i + 1}"
           end
 
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          end
+
           fh.puts "  end\n"
 
           err_msg = "must be greater than or equal to -#{max}"
@@ -441,8 +482,13 @@ if testunit || minitest
             fh.puts "    #{instance_var}.#{column} = -#{max.to_i + 1}"
           end
 
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          end
           fh.puts "  end\n"
       end
 
@@ -454,8 +500,13 @@ if testunit || minitest
           fh.puts "\n  def test_#{column}_cannot_be_nil"
         end
           fh.puts "    #{instance_var}.#{column} = nil"
-          fh.puts "    assert_false(#{instance_var}.valid?)"
-          fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+          if testunit
+            fh.puts "    assert_false(#{instance_var}.valid?)"
+            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+          else
+            fh.puts "    assert(!#{instance_var}.valid?)"
+            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+          end
         fh.puts "  end\n"
       end
     }
