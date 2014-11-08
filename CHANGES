@@ -1,3 +1,6 @@
+= 0.4.0 - 7-Nov-2014
+* Added support for minitest test file output.
+
 = 0.3.2 - 6-Nov-2014
 * Removed explicit references to Rails 3 in documentation. It's now simply
   Rails 2, or Rails 3 or higher.
