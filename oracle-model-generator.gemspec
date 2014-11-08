@@ -20,6 +20,7 @@ Gem::Specification.new do |gem|
 
   gem.description = <<-EOF
     The oracle-model-generator library allows you to generate an ActiveRecord
-    model from an existing Oracle table or view.
+    model from an existing Oracle table or view, as well as automatically
+    generate a baseline test file for test-unit or minitest.
   EOF
 end
