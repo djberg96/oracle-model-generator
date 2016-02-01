@@ -1,1 +1,1 @@
-require File.join(File.dirname(__FILE__), 'oracle/model/generator')
+require_relative 'oracle/model/generator'
