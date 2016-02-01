@@ -1,6 +1,7 @@
 = 0.4.1 - 1-Feb-2016
 * This gem is now signed.
 * Updated the gem related tasks in the Rakefile.
+* Added an oracle-model-generator.rb file for convenience.
 
 = 0.4.0 - 7-Nov-2014
 * Added support for minitest test file output.
