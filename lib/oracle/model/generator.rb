@@ -4,7 +4,7 @@ module Oracle
   module Model
     class Generator
       # The version of the oracle-model-generator library
-      VERSION = '0.4.0'
+      VERSION = '0.4.1'
 
       # The raw OCI8 connection.
       attr_reader :connection
