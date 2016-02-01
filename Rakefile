@@ -7,13 +7,9 @@ CLEAN.include("**/*.gem", "**/*.rbc", "**/*.log")
 namespace 'gem' do
   desc 'Create the oracle-model-generator gem'
   task :create => :clean do
+    require 'rubygems/package'
     spec = eval(IO.read('oracle-model-generator.gemspec'))
-    if Gem::VERSION < "2.0"
-      Gem::Builder.new(spec).build
-    else
-      require 'rubygems/package'
-      Gem::Package.build(spec)
-    end
+    Gem::Package.build(spec, true)
   end
 
   desc 'Install the oracle-model-generator gem'
