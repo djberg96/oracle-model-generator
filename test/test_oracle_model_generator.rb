@@ -5,9 +5,7 @@
 # I'm using the 'hr' database that comes as part of the Oracle Express
 # edition which you can download from oracle.com. Adjust as necessary.
 #############################################################################
-require 'rubygems'
-gem 'test-unit'
-require 'test/unit'
+require 'test-unit'
 require 'oracle/model/generator'
 
 class TC_Oracle_Model_Generator < Test::Unit::TestCase
@@ -20,7 +18,7 @@ class TC_Oracle_Model_Generator < Test::Unit::TestCase
   end
 
   test "version number is correct" do
-    assert_equal('0.4.0', Oracle::Model::Generator::VERSION)
+    assert_equal('0.4.1', Oracle::Model::Generator::VERSION)
   end
 
   test "constructor accepts an oci8 connection object" do
