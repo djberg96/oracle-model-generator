@@ -33,7 +33,7 @@ def help
     -t, --table    => The name of the table you wish to model.
     -v, --view     => The name of the view you wish to model.
     -o, --output   => The name of the file to create.
-    -u, --user     => The user used to establish a connection to the database.
+    -u, --user     => The username used to establish a connection to the database.
     -p, --password => The password used to establish a connection to the database.
     -r, --rails    => The version of rails you're using (2 or higher).
     -x, --tests    => Generate tests using testunit, minitest or rspec.
@@ -47,7 +47,7 @@ def help
     of the table, minus the 's' if present, with a .rb extension. This is lazy,
     but it is orders of magnitude easier for you to rename a file than it is
     for me to deal with all possible permutations. Note that the output file
-    name is also used as the basis for the class name
+    name is also used as the basis for the class name.
 
     If no tests option is specified then a test file, using test-unit 2, will
     be generated that includes some basic tests to backup the builtin
