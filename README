@@ -112,7 +112,7 @@ I also do not go out of my way to get the model name correct with regards
 to singular vs plural. I do a simple guess that covers most cases, but
 complex cases will break it. It's much easier for you to rename a class or
 file name than it is for me to get this 100% correct. As of 0.3.1 there's
-also the --class option that let's you eplicitly set it if you like.
+also the --class option that let's you explicitly set it if you like.
 
 = Author's Comments
 I chose not to patch legacy_data because I have no interest in supporting
