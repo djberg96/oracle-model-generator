@@ -1,3 +1,9 @@
+= MAINTAINER WANTED
+
+As of 2019 I haven't used Oracle or this library for many years. I would like
+to turn it over to someone who is. If you are interested please contact me,
+and we can discuss transferring the repository.
+
 = Description
 A library for generating an ActiveRecord model from an existing Oracle table.
 This will install an "omg" executable that you can use from the command line.
