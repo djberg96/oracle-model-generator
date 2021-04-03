@@ -1,6 +1,6 @@
-CHANGES
-MANIFEST
-README
+CHANGES.md
+MANIFEST.md
+README.md
 oracle-model-generator.gemspec
 Rakefile
 bin/omg

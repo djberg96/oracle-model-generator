@@ -1,17 +1,17 @@
-= MAINTAINER WANTED
+# MAINTAINER WANTED
 
 As of 2019 I haven't used Oracle or this library for many years. I would like
 to turn it over to someone who is. If you are interested please contact me,
 and we can discuss transferring the repository.
 
-= Description
+## Description
 A library for generating an ActiveRecord model from an existing Oracle table.
 This will install an "omg" executable that you can use from the command line.
 
-= Synopsis
+## Synopsis
 Using the command line tool:
 
-  omg -d your_database -t locations -u some_user -p some_password
+`omg -d your_database -t locations -u some_user -p some_password`
 
 The above command results in a file called "location.rb". This is an
 ActiveRecord model declaration, with all validations, primary keys,
@@ -19,45 +19,50 @@ table name and belongs_to relationships defined.
 
 If your LOCATIONS table looks like this:
 
-  create table locations(
-    location_id number(4,0) primary key,
-    street_address varchar2(40), 
-    postal_code varchar2(12),
-    city varchar2(30) not null
-    state_province varchar2(25),
-    country_id CHAR(2),
-    constraint "LOC_C_ID_FK" FOREIGN KEY (country_id)
-      references COUNTRIES (country_id)
-  )
+```sql
+create table locations(
+  location_id number(4,0) primary key,
+  street_address varchar2(40), 
+  postal_code varchar2(12),
+  city varchar2(30) not null
+  state_province varchar2(25),
+  country_id CHAR(2),
+  constraint "LOC_C_ID_FK" FOREIGN KEY (country_id)
+    references COUNTRIES (country_id)
+)
+```
 
 The omg library will generate this:
 
-  class Location < ActiveRecord::Base
-    set_table_name :locations
-    set_primary_key :location_id
+```ruby
+class Location < ActiveRecord::Base
+  set_table_name :locations
+  set_primary_key :location_id
 
-    # Table relationships
+  # Table relationships
 
-    belongs_to :countries
+  belongs_to :countries
 
-    # Validations
-    
-    validates :location_id, :presence => true, :numericality => {
-      :less_than_or_equal_to => 9999, 
-      :greater_than_or_equal_to => -9999,
-      :only_integer => true
-    }
+  # Validations
+  
+  validates :location_id, :presence => true, :numericality => {
+    :less_than_or_equal_to => 9999, 
+    :greater_than_or_equal_to => -9999,
+    :only_integer => true
+  }
 
-    validates :street_address, :length => {:maximum => 40}
-    validates :postal_code, :length => {:maximum => 12}
-    validates :city, :length => {:maximum => 30}, :presence => true
-    validates :state_province, :length => {:maximum => 25}
-    validates :country_id, :length => {:maximum => 2}
-  end
+  validates :street_address, :length => {:maximum => 40}
+  validates :postal_code, :length => {:maximum => 12}
+  validates :city, :length => {:maximum => 30}, :presence => true
+  validates :state_province, :length => {:maximum => 25}
+  validates :country_id, :length => {:maximum => 2}
+end
+```
 
-  It will also generate a corresponding test file using test-unit 2 by default.
-  For the above example you will see some tests like this:
+It will also generate a corresponding test file using test-unit 2 by default.
+For the above example you will see some tests like this:
 
+```ruby
 class TC_Location < Test::Unit::TestCase
   def setup
     @location = Location.new
@@ -91,24 +96,24 @@ class TC_Location < Test::Unit::TestCase
 
   # ... and so on.
 end
+```
 
-= Requirements
-== Must Have
+## Requirements
 * ruby-oci8
 * getopt
 
-== Optional
+## Optional Libraries
 If you want to be able to avoid specifying a username and password on the
-command line then you will need the dbi-dbrc library.
+command line then you will need the `dbi-dbrc` library.
 
 If you want your models to support multiple primary keys, then you will
-need to install the composite_primary_keys library.
+need to install the `composite_primary_keys` library.
 
 If you want date format validations, then you will need to install the
-validates_timeliness library.
+`validates_timeliness` library.
 
-= What this library doesn't do
-I do not attempt to set has_many or has_one relationships. There's no good
+## What this library doesn't do
+I do not attempt to set `has_many` or `has_one` relationships. There's no good
 way to determine that relationship (one or many?). Besides, in practice I
 find that most people set custom has_xxx relationships that go over and
 above what's set in the Oracle database anyway for purposes of their
@@ -117,40 +122,42 @@ application.
 I also do not go out of my way to get the model name correct with regards
 to singular vs plural. I do a simple guess that covers most cases, but
 complex cases will break it. It's much easier for you to rename a class or
-file name than it is for me to get this 100% correct. As of 0.3.1 there's
-also the --class option that let's you explicitly set it if you like.
+file name than it is for me to get this 100% correct.
 
-= Author's Comments
-I chose not to patch legacy_data because I have no interest in supporting
-other vendors other than Oracle with this library. By focusing only on
-Oracle I could take advantage of ruby-oci8 features. In addition, I have no
+As of 0.3.1 there's also the `--class` option that let's you explicitly
+set it if you like.
+
+## Author's Comments
+I chose not to patch the `legacy_data` library because I have no interest in
+supporting other vendors other than Oracle with this library. By focusing only
+on Oracle I could take advantage of ruby-oci8 features. In addition, I have no
 interest in making this a Rails plugin, and I needed the support of multiple
 primary keys.
 
-= Future Plans
+## Future Plans (originally)
 Add support for views.
 Add automatic test suite generation for rspec.
 Explicitly set :foreign_key if using CPK in belongs_to relationships.
 The output could use a little formatting love.
 
-= Acknowlegements
+## Acknowlegements
 Thanks go to Daniel Luna for his --class patch.
 
-= Known Issues
+## Known Issues
 None known. If you find any issues, please report them on the github project
 page at http://www.github.com/djberg96/oracle-model-generator.
 
-= Warranty
+## Warranty
 This package is provided "as is" and without any express or
 implied warranties, including, without limitation, the implied
 warranties of merchantability and fitness for a particular purpose.
 
-= Copyright
-(C) 2010-2016 Daniel J. Berger
+## Copyright
+(C) 2010-2021 Daniel J. Berger
 All Rights Reserved
 
-= License
-Artistic 2.0
+## License
+Artistic-2.0
 
-= Author
+## Author
 Daniel J. Berger
