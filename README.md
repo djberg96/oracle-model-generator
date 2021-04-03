@@ -135,10 +135,10 @@ interest in making this a Rails plugin, and I needed the support of multiple
 primary keys.
 
 ## Future Plans (originally)
-Add support for views.
-Add automatic test suite generation for rspec.
-Explicitly set :foreign_key if using CPK in belongs_to relationships.
-The output could use a little formatting love.
+* Add support for views.
+* Add automatic test suite generation for rspec.
+* Explicitly set :foreign_key if using CPK in belongs_to relationships.
+* The output could use a little formatting love.
 
 ## Acknowlegements
 Thanks go to Daniel Luna for his --class patch.
