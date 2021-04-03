@@ -2,7 +2,7 @@ require 'rake'
 require 'rake/testtask'
 require 'rake/clean'
 
-CLEAN.include("**/*.gem", "**/*.rbc", "**/*.log")
+CLEAN.include("**/*.gem", "**/*.rbc", "**/*.log", "**/*.lock")
 
 namespace 'gem' do
   desc 'Create the oracle-model-generator gem'
@@ -10,7 +10,7 @@ namespace 'gem' do
     require 'rubygems/package'
     spec = eval(IO.read('oracle-model-generator.gemspec'))
     spec.signing_key = File.join(Dir.home, '.ssh', 'gem-private_key.pem')
-    Gem::Package.build(spec, true)
+    Gem::Package.build(spec)
   end
 
   desc 'Install the oracle-model-generator gem'

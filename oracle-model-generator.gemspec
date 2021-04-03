@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name       = 'oracle-model-generator'
   spec.version    = '0.4.1'
   spec.author     = 'Daniel J. Berger'
-  spec.license    = 'Artistic 2.0'
+  spec.license    = 'Artistic-2.0'
   spec.email      = 'djberg96@gmail.com'
   spec.homepage   = 'http://www.github.com/djberg96/oracle-model-generator'
   spec.summary    = 'A Ruby interface for determining protocol information'
@@ -13,11 +13,10 @@ Gem::Specification.new do |spec|
   spec.cert_chain = spec.cert_chain = ['certs/djberg96_pub.pem']
 
   spec.executables = "omg"
-  spec.extra_rdoc_files = %w[CHANGES README MANIFEST]
 
-  spec.add_dependency('ruby-oci8')
-  spec.add_dependency('getopt')
-  spec.add_development_dependency('test-unit')
+  spec.add_dependency('ruby-oci8', '~> 2.2')
+  spec.add_dependency('getopt', '~> 1.6')
+  spec.add_development_dependency('test-unit', '~> 3.4')
 
   spec.description = <<-EOF
     The oracle-model-generator library allows you to generate an ActiveRecord
