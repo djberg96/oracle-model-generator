@@ -36,7 +36,6 @@ COPY oracle-model-generator.gemspec Gemfile ./
 
 # Install Ruby dependencies
 RUN bundle config set --local deployment false && \
-    bundle config set --local path vendor/bundle && \
     bundle install --verbose
 
 # Copy the rest of the application

@@ -67,27 +67,18 @@ The Docker environment supports these environment variables:
 - `ORACLE_USER`: Database username (default: hr)
 - `ORACLE_PASSWORD`: Database password (default: hr)
 
-## What's Included
+## Summary
 
-The Docker image includes:
+The Docker setup provides a robust testing environment for the Oracle Model Generator that:
 
-- Ruby 3.1 with all required gems
-- Oracle Instant Client 21.13
-- All dependencies for ruby-oci8
-- The oracle-model-generator library
-- Test framework (test-unit)
+- ✅ Works on all platforms (Linux, macOS, Windows)
+- ✅ Includes Oracle Instant Client and ruby-oci8
+- ✅ Has comprehensive environment verification
+- ✅ Supports both standalone and full-stack testing
+- ✅ Uses optimized gem installation for containers
+- ⚠️  Oracle XE database has some macOS compatibility limitations
 
-## Oracle Database Requirements
-
-The tests expect an Oracle database with the HR sample schema. The Docker Compose setup automatically creates this using the `gvenzl/oracle-xe` image.
-
-If you're using your own Oracle database, make sure:
-
-1. The HR schema is installed and accessible
-2. The user has appropriate permissions
-3. The following tables/views exist:
-   - `employees`
-   - `emp_details_view`
+This gives you a reliable way to test Oracle connectivity without installing Oracle client libraries on your host system.
 
 ## Troubleshooting
 
