@@ -134,7 +134,7 @@ if rails < 2
   puts "Invalid version of Rails. Must be 2 or higher."
   exit!
 end
-  
+
 omg.instance_eval { @model = opts['class'] } if opts['class'] # dirty fix
 
 File.open(ofile, 'w') do |fh|
@@ -227,8 +227,8 @@ File.open(ofile, 'w') do |fh|
 
           unless max.empty?
             validation << ", :numericality => {"
-            validation << "\n    :less_than_or_equal_to => #{max}, " 
-            validation << "\n    :greater_than_or_equal_to => -#{max}" 
+            validation << "\n    :less_than_or_equal_to => #{max}, "
+            validation << "\n    :greater_than_or_equal_to => -#{max}"
 
             if col.scale == 0
               validation << ",\n    :only_integer => true"
@@ -274,109 +274,191 @@ opts['x'] ||= 'testunit' # Default
 
 testunit = opts['x'] == 'testunit'
 minitest = opts['x'] == 'minitest'
+rspec    = opts['x'] == 'rspec'
 
-if testunit || minitest
-  test_file = "test_#{ofile}"
+if testunit || minitest || rspec
+  if rspec
+    test_file = "#{ofile.gsub('.rb', '')}_spec.rb"
+  else
+    test_file = "test_#{ofile}"
+  end
 
   File.open(test_file, "w") do |fh|
     setup_var = omg.table.downcase
-    setup_var.chop! if setup_var[-1].chr.downcase == 's'  
+    setup_var.chop! if setup_var[-1].chr.downcase == 's'
     instance_var = "@#{setup_var}"
 
     if testunit
       fh.puts "require 'test-unit'\n\n"
-    else
+    elsif minitest
       fh.puts "require 'minitest/autorun'\n\n"
+    else # rspec
+      fh.puts "require 'rspec'\n"
+      fh.puts "require_relative '#{ofile.gsub('.rb', '')}'\n\n"
     end
 
     if testunit
       fh.puts "class TC_#{omg.model} < Test::Unit::TestCase\n"
-    else
+    elsif minitest
       fh.puts "class TC_#{omg.model} < Minitest::Unit::TestCase\n"
+    else # rspec
+      fh.puts "RSpec.describe #{omg.model} do\n"
     end
 
-    fh.puts "  def setup"
-    fh.puts "    #{instance_var} = #{omg.model}.new"
-    fh.puts "  end\n\n"
+    if rspec
+      fh.puts "  let(:#{setup_var}) { #{omg.model}.new }\n\n"
+    else
+      fh.puts "  def setup"
+      fh.puts "    #{instance_var} = #{omg.model}.new"
+      fh.puts "  end\n\n"
+    end
 
     if testunit
       fh.puts "  test 'table name is #{omg.table.downcase}' do"
-    else
+    elsif minitest
       fh.puts "  def table_name_is_#{omg.table.downcase}"
+    else # rspec
+      fh.puts "  describe 'table configuration' do"
+      fh.puts "    it 'has table name #{omg.table.downcase}' do"
     end
-    fh.puts "    assert_equal('#{omg.table.downcase}', #{omg.model}.table_name)"
-    fh.puts "  end\n\n"
+
+    if rspec
+      fh.puts "      expect(#{omg.model}.table_name).to eq('#{omg.table.downcase}')"
+    else
+      fh.puts "    assert_equal('#{omg.table.downcase}', #{omg.model}.table_name)"
+    end
+
+    if rspec
+      fh.puts "    end"
+    else
+      fh.puts "  end\n\n"
+    end
 
     if omg.primary_keys.size > 1
       if testunit
         test_string = "  test 'primary keys are #{omg.primary_keys.join(', ')}' do"
-      else
+      elsif minitest
         test_string = "  def test_primary_keys_are_#{omg.primary_keys.join('_')}"
+      else # rspec
+        test_string = "    it 'has primary keys #{omg.primary_keys.join(', ')}' do"
       end
       fh.puts test_string
-      fh.puts "    assert_equal('#{omg.primary_keys.join(', ')}', #{omg.model}.primary_keys)"
+
+      if rspec
+        fh.puts "      expect(#{omg.model}.primary_keys).to eq('#{omg.primary_keys.join(', ')}')"
+      else
+        fh.puts "    assert_equal('#{omg.primary_keys.join(', ')}', #{omg.model}.primary_keys)"
+      end
     else
       if testunit
         test_string = "  test 'primary key is #{omg.primary_keys.first}' do"
-      else
+      elsif minitest
         test_string = "  def test_primary_key_is_#{omg.primary_keys.first}"
+      else # rspec
+        test_string = "    it 'has primary key #{omg.primary_keys.first}' do"
       end
       fh.puts test_string
-      fh.puts "    assert_equal('#{omg.primary_keys.first}', #{omg.model}.primary_key)"
+
+      if rspec
+        fh.puts "      expect(#{omg.model}.primary_key).to eq('#{omg.primary_keys.first}')"
+      else
+        fh.puts "    assert_equal('#{omg.primary_keys.first}', #{omg.model}.primary_key)"
+      end
     end
 
-    fh.puts "  end\n"
+    if rspec
+      fh.puts "    end"
+      fh.puts "  end\n"
+    else
+      fh.puts "  end\n"
+    end
 
     omg.column_info.each{ |col|
       data_type = col.data_type.to_s
       column    = col.name.downcase
 
+      if rspec
+        fh.puts "\n  describe '#{column} column' do"
+        instance_reference = setup_var
+      else
+        instance_reference = instance_var
+      end
+
       if testunit
         fh.puts "\n  test '#{column} basic functionality' do"
-      else
+      elsif minitest
         fh.puts "\n  def test_#{column}_basic_functionality"
+      else # rspec
+        fh.puts "    it 'responds to #{column}' do"
       end
-      fh.puts "    assert_respond_to(#{instance_var}, :#{column})"
-      fh.puts "    assert_nothing_raised{ #{instance_var}.#{column} }" if testunit
+
+      if rspec
+        fh.puts "      expect(#{instance_reference}).to respond_to(:#{column})"
+      else
+        fh.puts "    assert_respond_to(#{instance_reference}, :#{column})"
+        fh.puts "    assert_nothing_raised{ #{instance_reference}.#{column} }" if testunit
+      end
 
       case data_type
         when 'char', 'varchar', 'varchar2'
           if col.nullable?
             if testunit
-              fh.puts "    assert_kind_of([NilClass, String], #{instance_var}.#{column})"
-            else
-              fh.puts "    assert([NilClass, String].include?(#{instance_var}.#{column}.class))"
+              fh.puts "    assert_kind_of([NilClass, String], #{instance_reference}.#{column})"
+            elsif minitest
+              fh.puts "    assert([NilClass, String].include?(#{instance_reference}.#{column}.class))"
+            else # rspec
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(String).or be_nil"
             end
           else
-            fh.puts "    assert_kind_of(String, #{instance_var}.#{column})"
+            if rspec
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(String)"
+            else
+              fh.puts "    assert_kind_of(String, #{instance_reference}.#{column})"
+            end
           end
         when 'number'
           if col.nullable?
             if testunit
-              fh.puts "    assert_kind_of([NilClass, Numeric], #{instance_var}.#{column})"
-            else
-              fh.puts "    assert([NilClass, Numeric].include?(#{instance_var}.#{column}.class))"
+              fh.puts "    assert_kind_of([NilClass, Numeric], #{instance_reference}.#{column})"
+            elsif minitest
+              fh.puts "    assert([NilClass, Numeric].include?(#{instance_reference}.#{column}.class))"
+            else # rspec
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(Numeric).or be_nil"
             end
           else
-            fh.puts "    assert_kind_of(Numeric, #{instance_var}.#{column})"
+            if rspec
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(Numeric)"
+            else
+              fh.puts "    assert_kind_of(Numeric, #{instance_reference}.#{column})"
+            end
           end
         when 'date'
           if testunit
             if col.nullable?
-              fh.puts "    assert_kind_of([NilClass, DateTime, Time], #{instance_var}.#{column})"
+              fh.puts "    assert_kind_of([NilClass, DateTime, Time], #{instance_reference}.#{column})"
             else
-              fh.puts "    assert_kind_of([DateTime, Time], #{instance_var}.#{column})"
+              fh.puts "    assert_kind_of([DateTime, Time], #{instance_reference}.#{column})"
             end
-          else
+          elsif minitest
             if col.nullable?
-              fh.puts "    assert([NilClass, DateTime, Time].include?(#{instance_var}.#{column}.class))"
+              fh.puts "    assert([NilClass, DateTime, Time].include?(#{instance_reference}.#{column}.class))"
             else
-              fh.puts "    assert([DateTime, Time].include?(#{instance_var}.#{column}.class))"
+              fh.puts "    assert([DateTime, Time].include?(#{instance_reference}.#{column}.class))"
+            end
+          else # rspec
+            if col.nullable?
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(DateTime).or be_a(Time).or be_nil"
+            else
+              fh.puts "      expect(#{instance_reference}.#{column}).to be_a(DateTime).or be_a(Time)"
             end
           end
       end
 
-      fh.puts "  end\n"
+      if rspec
+        fh.puts "    end\n"
+      else
+        fh.puts "  end\n"
+      end
 
       case data_type
         when 'char', 'varchar', 'varchar2'
@@ -384,19 +466,30 @@ if testunit || minitest
             test_title = "\n  test '#{column} must be a string"
             test_title += " if present" if col.nullable?
             test_title += "' do"
-          else
+          elsif minitest
             test_title = "\n  def test_#{column}_must_be_a_string"
             test_title += "_if_present" if col.nullable?
+          else # rspec
+            test_title = "    it 'validates #{column} as a string"
+            test_title += " if present" if col.nullable?
+            test_title += "' do"
           end
 
           fh.puts test_title
-          fh.puts "    #{instance_var}.#{column} = #{rand(100)}"
-          if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+
+          if rspec
+            fh.puts "      #{instance_reference}.#{column} = #{rand(100)}"
+            fh.puts "      expect(#{instance_reference}).not_to be_valid"
+            fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include('is not a string')"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('is not a string'))"
+            fh.puts "    #{instance_reference}.#{column} = #{rand(100)}"
+            if testunit
+              fh.puts "    assert_false(#{instance_reference}.valid?)"
+              fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?('is not a string'))"
+            else
+              fh.puts "    assert(!#{instance_reference}.valid?)"
+              fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?('is not a string'))"
+            end
           end
           fh.puts "  end\n"
 
@@ -405,18 +498,25 @@ if testunit || minitest
 
           if testunit
             fh.puts "\n  test '#{column} cannot exceed #{max_len} characters' do"
-          else
+          elsif minitest
             fh.puts "\n  def test_#{column}_cannot_exceed_#{max_len}_characters"
+          else # rspec
+            fh.puts "    it 'validates #{column} length cannot exceed #{max_len} characters' do"
           end
 
-          fh.puts "    #{instance_var}.#{column} = 'a' * #{max_len + 1}"
-
-          if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          if rspec
+            fh.puts "      #{instance_reference}.#{column} = 'a' * #{max_len + 1}"
+            fh.puts "      expect(#{instance_reference}).not_to be_valid"
+            fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include('#{err_msg}')"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+            fh.puts "    #{instance_reference}.#{column} = 'a' * #{max_len + 1}"
+            if testunit
+              fh.puts "    assert_false(#{instance_reference}.valid?)"
+              fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            else
+              fh.puts "    assert(!#{instance_reference}.valid?)"
+              fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            end
           end
           fh.puts "  end\n"
         when 'number'
@@ -424,20 +524,30 @@ if testunit || minitest
             test_title = "\n  test '#{column} must be a number"
             test_title += " if present" if col.nullable?
             test_title += "' do"
-          else
+          elsif minitest
             test_title = "\n  def test_#{column}_must_be_a_number"
             test_title += "_if_present" if col.nullable?
+          else # rspec
+            test_title = "    it 'validates #{column} as a number"
+            test_title += " if present" if col.nullable?
+            test_title += "' do"
           end
 
           fh.puts test_title
-          fh.puts "    #{instance_var}.#{column} = 'test_string'"
 
-          if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+          if rspec
+            fh.puts "      #{instance_reference}.#{column} = 'test_string'"
+            fh.puts "      expect(#{instance_reference}).not_to be_valid"
+            fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include('is not a number')"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('is not a number'))"
+            fh.puts "    #{instance_reference}.#{column} = 'test_string'"
+            if testunit
+              fh.puts "    assert_false(#{instance_reference}.valid?)"
+              fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?('is not a number'))"
+            else
+              fh.puts "    assert(!#{instance_reference}.valid?)"
+              fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?('is not a number'))"
+            end
           end
 
           fh.puts "  end\n"
@@ -448,22 +558,31 @@ if testunit || minitest
 
           if testunit
             fh.puts "\n  test '#{column} cannot exceed the value #{max}' do"
-          else
+          elsif minitest
             fh.puts "\n  def test_#{column}_cannot_exceed_the_value_#{max.sub('.', '_')}"
+          else # rspec
+            fh.puts "    it 'validates #{column} cannot exceed the value #{max}' do"
           end
 
           if col.scale > 0
-            fh.puts "    #{instance_var}.#{column} = #{max.to_f.round}"
+            value_to_set = "#{max.to_f.round}"
           else
-            fh.puts "    #{instance_var}.#{column} = #{max.to_i + 1}"
+            value_to_set = "#{max.to_i + 1}"
           end
 
-          if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          if rspec
+            fh.puts "      #{instance_reference}.#{column} = #{value_to_set}"
+            fh.puts "      expect(#{instance_reference}).not_to be_valid"
+            fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include('#{err_msg}')"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+            fh.puts "    #{instance_reference}.#{column} = #{value_to_set}"
+            if testunit
+              fh.puts "    assert_false(#{instance_reference}.valid?)"
+              fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            else
+              fh.puts "    assert(!#{instance_reference}.valid?)"
+              fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            end
           end
 
           fh.puts "  end\n"
@@ -472,22 +591,31 @@ if testunit || minitest
 
           if testunit
             fh.puts "\n  test '#{column} cannot be less than the value -#{max}' do"
-          else
+          elsif minitest
             fh.puts "\n  def test_#{column}_cannot_be_less_than_the_value_#{max.sub('.', '_')}"
+          else # rspec
+            fh.puts "    it 'validates #{column} cannot be less than the value -#{max}' do"
           end
 
           if col.scale > 0
-            fh.puts "    #{instance_var}.#{column} = -#{max.to_f.round}"
+            neg_value = "-#{max.to_f.round}"
           else
-            fh.puts "    #{instance_var}.#{column} = -#{max.to_i + 1}"
+            neg_value = "-#{max.to_i + 1}"
           end
 
-          if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+          if rspec
+            fh.puts "      #{instance_reference}.#{column} = #{neg_value}"
+            fh.puts "      expect(#{instance_reference}).not_to be_valid"
+            fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include('#{err_msg}')"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?('#{err_msg}'))"
+            fh.puts "    #{instance_reference}.#{column} = #{neg_value}"
+            if testunit
+              fh.puts "    assert_false(#{instance_reference}.valid?)"
+              fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            else
+              fh.puts "    assert(!#{instance_reference}.valid?)"
+              fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?('#{err_msg}'))"
+            end
           end
           fh.puts "  end\n"
       end
@@ -496,36 +624,52 @@ if testunit || minitest
         err_msg = "can't be blank"
         if testunit
           fh.puts "\n  test '#{column} cannot be nil' do"
-        else
+        elsif minitest
           fh.puts "\n  def test_#{column}_cannot_be_nil"
+        else # rspec
+          fh.puts "    it 'validates #{column} presence' do"
         end
-          fh.puts "    #{instance_var}.#{column} = nil"
+
+        if rspec
+          fh.puts "      #{instance_reference}.#{column} = nil"
+          fh.puts "      expect(#{instance_reference}).not_to be_valid"
+          fh.puts "      expect(#{instance_reference}.errors[:#{column}]).to include(\"#{err_msg}\")"
+        else
+          fh.puts "    #{instance_reference}.#{column} = nil"
           if testunit
-            fh.puts "    assert_false(#{instance_var}.valid?)"
-            fh.puts "    assert_true(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+            fh.puts "    assert_false(#{instance_reference}.valid?)"
+            fh.puts "    assert_true(#{instance_reference}.errors[:#{column}].include?(\"#{err_msg}\"))"
           else
-            fh.puts "    assert(!#{instance_var}.valid?)"
-            fh.puts "    assert(#{instance_var}.errors[:#{column}].include?(\"#{err_msg}\"))"
+            fh.puts "    assert(!#{instance_reference}.valid?)"
+            fh.puts "    assert(#{instance_reference}.errors[:#{column}].include?(\"#{err_msg}\"))"
           end
+        end
         fh.puts "  end\n"
+      end
+
+      if rspec
+        fh.puts "  end\n"  # Close the describe block for this column
       end
     }
 
-    fh.puts "\n  def teardown"
-    fh.puts "     @#{setup_var} = nil"
-    fh.puts "  end"
+    if rspec
+      # RSpec doesn't need teardown - using let handles cleanup automatically
+    else
+      fh.puts "\n  def teardown"
+      fh.puts "     @#{setup_var} = nil"
+      fh.puts "  end"
+    end
 
     fh.puts "end"
   end
   puts "\nTest file '#{test_file}' generated\n"
 else
-  if opts['x'] == 'rspec'
-    puts "\nrspec not yet supported for generating tests.\n"
-  elsif opts['x'] != 'none'
+  if opts['x'] != 'none'
     puts "\nInvalid option to -x/--tests: " + opts['x']
+    puts "Valid options are: testunit, minitest, rspec, or none"
   else
-    puts "\nSkipping test file genertion.\n"
-  end 
+    puts "\nSkipping test file generation.\n"
+  end
 end
 
 omg.connection.logoff if omg.connection
