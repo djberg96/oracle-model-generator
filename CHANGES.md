@@ -1,4 +1,4 @@
-## 0.5.0 - ???
+## 0.5.0 - 22-Jul-2025
 * Added docker related files, so you can now fire up an Oracle container and
   run the specs against that.
 * Replaced test-unit with rspec.
