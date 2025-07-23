@@ -16,7 +16,7 @@ jobs:
 
     services:
       oracle:
-        image: gvenzl/oracle-xe:21-slim
+        image: gvenzl/oracle-free:23-slim
         env:
           ORACLE_PASSWORD: oracle
           APP_USER: hr
@@ -38,41 +38,38 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
-        bundler-cache: true
+        bundler-cache: false
 
-    - name: Install Oracle Instant Client and gems
+    - name: Install Oracle Instant Client
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget unzip libaio1
+        sudo apt-get install -y libaio1 alien
 
-        # Download and install Oracle Instant Client
-        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-basic-linux.x64-23.4.0.24.05.zip
-        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-sdk-linux.x64-23.4.0.24.05.zip
+        # Use APT repository method for Oracle Instant Client
+        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/oracle-instantclient-basic-23.4.0.24.05-1.el9.x86_64.rpm
+        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/oracle-instantclient-devel-23.4.0.24.05-1.el9.x86_64.rpm
 
-        sudo mkdir -p /opt/oracle
-        sudo unzip instantclient-basic-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
-        sudo unzip instantclient-sdk-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
+        sudo alien -i oracle-instantclient-basic-23.4.0.24.05-1.el9.x86_64.rpm
+        sudo alien -i oracle-instantclient-devel-23.4.0.24.05-1.el9.x86_64.rpm
 
-        # Configure library path
-        echo "/opt/oracle/instantclient_23_4" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+        # Set up library configuration
+        echo "/usr/lib/oracle/23/client64/lib" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
 
-        # Export environment variables and install gems in the same step
-        export LD_LIBRARY_PATH=/opt/oracle/instantclient_23_4:$LD_LIBRARY_PATH
-        export ORACLE_HOME=/opt/oracle/instantclient_23_4
-
-        # Install gems with Oracle environment
-        bundle install
+    - name: Install gems
+      run: bundle install
+      env:
+        LD_LIBRARY_PATH: /usr/lib/oracle/23/client64/lib
+        ORACLE_HOME: /usr/lib/oracle/23/client64
 
     - name: Run specs
-      run: |
-        export LD_LIBRARY_PATH=/opt/oracle/instantclient_23_4:$LD_LIBRARY_PATH
-        export ORACLE_HOME=/opt/oracle/instantclient_23_4
-        bundle exec rspec spec/database_model_generator_spec.rb
+      run: bundle exec rspec spec/database_model_generator_spec.rb
       env:
+        LD_LIBRARY_PATH: /usr/lib/oracle/23/client64/lib
+        ORACLE_HOME: /usr/lib/oracle/23/client64
         DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
-        ORACLE_SID: freepdb1
+        ORACLE_SID: FREE
         ORACLE_USER: hr
         ORACLE_PASSWORD: hr
