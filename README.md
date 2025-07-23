@@ -1,3 +1,9 @@
+# Database Model Generator
+
+[![CI](https://github.com/djberg96/oracle-model-generator/workflows/CI/badge.svg)](https://github.com/djberg96/oracle-model-generator/actions?query=workflow%3ACI)
+[![Nightly](https://github.com/djberg96/oracle-model-generator/workflows/Nightly/badge.svg)](https://github.com/djberg96/oracle-model-generator/actions?query=workflow%3ANightly)
+[![Gem Version](https://badge.fury.io/rb/oracle-model-generator.svg)](https://badge.fury.io/rb/oracle-model-generator)
+
 # MAINTAINER WANTED
 
 As of 2019 I haven't used Oracle or this library for many years. I would like
@@ -169,6 +175,38 @@ features and optimizations.
 * **Index recommendations**: Suggests optimal indexes for your tables
 * **Multiple test frameworks**: Supports test-unit, minitest, and rspec
 * **Docker support**: Complete Docker environments for testing both databases
+
+## Development & CI/CD
+
+This project uses GitHub Actions for continuous integration and testing:
+
+* **CI Workflow**: Tests Ruby versions 3.1-3.4 against both Oracle and SQL Server
+* **Nightly Workflow**: Tests latest database versions and Ruby head
+* **Release Workflow**: Automated gem building and publishing on version tags
+
+### Running Tests Locally
+
+#### SQL Server Tests
+```bash
+cd docker/sqlserver
+docker-compose up
+# In another terminal:
+ruby bin/dmg -T sqlserver -s localhost -P 1433 -d test_polymorphic -u sa -p 'YourStrong!Passw0rd' -t posts
+```
+
+#### Oracle Tests
+```bash
+cd docker/oracle
+docker-compose up
+# In another terminal:
+ruby bin/dmg -T oracle -s localhost -P 1521 -d XEPDB1 -u testuser -p testpass -t dual
+```
+
+#### RSpec Tests
+```bash
+bundle install
+bundle exec rspec
+```
 
 ## Future Plans (originally)
 * Add support for views.
