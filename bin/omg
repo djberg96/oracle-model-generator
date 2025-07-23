@@ -270,7 +270,7 @@ File.open(ofile, 'w') do |fh|
   fh.puts "end"
 end
 
-opts['x'] ||= 'testunit' # Default
+opts['x'] ||= 'rspec' # Default
 
 testunit = opts['x'] == 'testunit'
 minitest = opts['x'] == 'minitest'

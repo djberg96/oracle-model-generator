@@ -47,6 +47,9 @@ module Oracle
       #   ogenerator.generate('users')
       #
       def initialize(connection)
+        raise ArgumentError, "Connection cannot be nil" if connection.nil?
+        raise ArgumentError, "Connection must be an OCI8 object" unless connection.is_a?(OCI8)
+
         @connection   = connection
         @constraints  = []
         @primary_keys = []
@@ -70,48 +73,137 @@ module Oracle
       # than it is for me to parse English.
       #
       def generate(table, view = false)
+        raise ArgumentError, "Table name cannot be nil or empty" if table.nil? || table.strip.empty?
+
         @table = table.upcase
-        @model = table.split('_').map{ |e| e.downcase.capitalize }.join
+        @model = generate_model_name(table)
         @view  = view
 
-        # Remove trailing 's'
-        @model.chop! if @model[-1].chr.upcase == 'S'
+        begin
+          unless view
+            get_constraints
+            get_foreign_keys
+            get_column_info
+          end
 
-        unless view
-          get_constraints
-          get_foreign_keys
-          get_column_info
+          get_primary_keys
+          get_dependencies
+        rescue => e
+          # Reset state on error to ensure object is in a consistent state
+          reset_state
+          raise "Failed to generate model for table '#{table}': #{e.message}"
         end
+      end
 
-        get_primary_keys
-        get_dependencies
+      # Public method to check if the generator has been populated with data
+      def generated?
+        !@table.nil? && !@model.nil?
+      end
+
+      # Public method to get column names
+      def column_names
+        @column_info.map(&:name).map(&:downcase)
+      end
+
+      # Public method to check if table/view exists
+      def table_exists?
+        return false unless @table
+
+        sql = @view ? "SELECT 1 FROM all_views WHERE view_name = '#{@table}'" :
+                     "SELECT 1 FROM all_tables WHERE table_name = '#{@table}'"
+
+        cursor = nil
+        begin
+          cursor = @connection.exec(sql)
+          !cursor.fetch.nil?
+        rescue
+          false
+        ensure
+          cursor.close if cursor
+        end
+      end
+
+      # Public method to get readable constraint information
+      def constraint_summary
+        return {} unless generated?
+
+        summary = Hash.new { |h, k| h[k] = [] }
+        @constraints.each do |constraint|
+          type = case constraint['CONSTRAINT_TYPE']
+                 when 'P' then 'Primary Key'
+                 when 'R' then 'Foreign Key'
+                 when 'U' then 'Unique'
+                 when 'C' then 'Check'
+                 else constraint['CONSTRAINT_TYPE']
+                 end
+          summary[constraint['COLUMN_NAME'].downcase] << type
+        end
+        summary
       end
 
       private
 
+      # Reset internal state - useful for error recovery
+      def reset_state
+        @constraints.clear
+        @primary_keys.clear
+        @foreign_keys.clear
+        @dependencies.clear
+        @belongs_to.clear
+        @column_info.clear
+        @table = nil
+        @model = nil
+        @view = nil
+      end
+
+      # Generate a more intelligent model name from table name
+      def generate_model_name(table)
+        # Handle common table naming patterns
+        name = table.split('_').map{ |part| part.downcase.capitalize }.join
+
+        # Remove trailing 's' for pluralized table names
+        name.chop! if name.length > 1 && name[-1].chr.upcase == 'S'
+
+        # Handle special cases
+        case name.downcase
+        when 'people'
+          'Person'
+        when 'children'
+          'Child'
+        when 'data'
+          'Datum'
+        else
+          name
+        end
+      end
+
       def get_column_info
-        table = @connection.describe_table(@table)
-        table.columns.each{ |col| @column_info << col }
+        begin
+          table = @connection.describe_table(@table)
+          table.columns.each{ |col| @column_info << col }
+        rescue => e
+          raise "Failed to describe table '#{@table}': #{e.message}"
+        end
       end
 
       # Returns an array of primary keys.
       #
       def get_primary_keys
-        @constraints.each{ |hash|
-          if hash['CONSTRAINT_TYPE'] == 'P'
-            @primary_keys << hash['COLUMN_NAME'].downcase
-          end
-        }
+        primary_key_constraints = @constraints.select { |hash| hash['CONSTRAINT_TYPE'] == 'P' }
+        @primary_keys = primary_key_constraints
+                        .map { |hash| hash['COLUMN_NAME'].downcase }
+                        .sort # Ensure consistent ordering
+                        .uniq # Remove any duplicates
       end
 
       # Returns an array of foreign keys.
       #
       def get_foreign_keys
-        @constraints.each{ |hash|
-          if hash['CONSTRAINT_TYPE'] == 'R'
-            @foreign_keys << hash['R_CONSTRAINT_NAME']
-          end
-        }
+        foreign_key_constraints = @constraints.select { |hash| hash['CONSTRAINT_TYPE'] == 'R' }
+        @foreign_keys = foreign_key_constraints
+                        .map { |hash| hash['R_CONSTRAINT_NAME'] }
+                        .compact
+                        .uniq
 
         get_belongs_to()
       end
@@ -120,9 +212,10 @@ module Oracle
       # ties to.
       #
       def get_belongs_to
-        @foreign_keys.each{ |fk|
-          @belongs_to << find_fk_table(fk)
-        }
+        @belongs_to = @foreign_keys.map { |fk| find_fk_table(fk) }
+                                   .compact
+                                   .uniq
+                                   .sort
       end
 
       # Find table name based on a foreign key name.
@@ -134,14 +227,16 @@ module Oracle
           where constraint_name = '#{fk}'
         }
 
+        cursor = nil
         begin
           cursor = @connection.exec(sql)
-          table = cursor.fetch.first
+          result = cursor.fetch
+          result ? result.first : nil
+        rescue => e
+          raise "Failed to find foreign key table for '#{fk}': #{e.message}"
         ensure
           cursor.close if cursor
         end
-
-        table
       end
 
       # Get a list of constraints for a given table.
@@ -156,11 +251,14 @@ module Oracle
           and b.table_name = '#{@table}'
         }
 
+        cursor = nil
         begin
           cursor = @connection.exec(sql)
           while rec = cursor.fetch_hash
             @constraints << rec
           end
+        rescue => e
+          raise "Failed to get constraints for table '#{@table}': #{e.message}"
         ensure
           cursor.close if cursor
         end
@@ -175,11 +273,14 @@ module Oracle
           where referenced_name = '#{@table}'
         }
 
+        cursor = nil
         begin
           cursor = @connection.exec(sql)
           while rec = cursor.fetch_hash
             @dependencies << rec
           end
+        rescue => e
+          raise "Failed to get dependencies for table '#{@table}': #{e.message}"
         ensure
           cursor.close if cursor
         end
