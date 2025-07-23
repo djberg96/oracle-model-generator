@@ -228,6 +228,10 @@ module Oracle
         constraint['COLUMN_NAME']
       end
 
+      def get_constraint_text(constraint)
+        constraint['SEARCH_CONDITION']
+      end
+
       def is_string_type?(column)
         column.data_type.to_s.downcase =~ /(char|varchar|varchar2|clob)/
       end

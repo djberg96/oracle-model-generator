@@ -186,6 +186,10 @@ module SqlServer
         constraint['COLUMN_NAME']
       end
 
+      def get_constraint_text(constraint)
+        constraint['CHECK_CLAUSE']
+      end
+
       def is_string_type?(column)
         column.data_type.downcase =~ /(char|varchar|nchar|nvarchar|text|ntext)/
       end

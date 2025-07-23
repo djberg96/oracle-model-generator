@@ -299,6 +299,14 @@ File.open(ofile, 'w') do |fh|
     end
   end
 
+  # Enum definitions
+  if omg.has_enum_columns?
+    fh.puts "\n  # Enums"
+    omg.enum_definitions.each do |enum_def|
+      fh.puts "  #{enum_def}"
+    end
+  end
+
   fh.puts "\n  # Validations\n"
 
   if rails == 2
