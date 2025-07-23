@@ -285,6 +285,20 @@ File.open(ofile, 'w') do |fh|
     fh.puts "  belongs_to :#{table.downcase}"
   }
 
+  # Polymorphic associations
+  if omg.has_polymorphic_associations?
+    fh.puts "\n  # Polymorphic associations" unless omg.belongs_to.empty?
+    omg.polymorphic_associations.each do |assoc|
+      fh.puts "  belongs_to :#{assoc[:association_name]}, polymorphic: true"
+    end
+
+    # Add suggestions for parent models
+    fh.puts "\n  # For polymorphic parent models, add these associations:"
+    omg.polymorphic_has_many_suggestions.each do |suggestion|
+      fh.puts "  # #{suggestion[:association]}  # #{suggestion[:description]}"
+    end
+  end
+
   fh.puts "\n  # Validations\n"
 
   if rails == 2
