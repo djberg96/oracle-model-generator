@@ -21,7 +21,8 @@ opts = Getopt::Long.getopts(
   ['--output',   '-o', Getopt::REQUIRED],
   ['--rails',    '-r', Getopt::REQUIRED],
   ['--tests',    '-x', Getopt::OPTIONAL],
-  ['--class',    '-c', Getopt::OPTIONAL]
+  ['--class',    '-c', Getopt::OPTIONAL],
+  ['--indexes',  '-i']
 )
 
 def help
@@ -38,6 +39,7 @@ def help
     -r, --rails    => The version of rails you're using (2 or higher).
     -x, --tests    => Generate tests using testunit, minitest or rspec.
     -c, --class    => Class name for the generated table (optional)
+    -i, --indexes  => Show only index recommendations without generating model.
 
     If no user or password are supplied, then OMG will attempt to glean that
     information using a combination of the database name and your .dbrc file.
@@ -119,6 +121,65 @@ connection = OCI8.new(user, pass, opts['database'])
 omg = Oracle::Model::Generator.new(connection)
 omg.generate(table || view, view)
 
+# If user only wants index recommendations, show them and exit
+if opts['indexes']
+  puts "Index Recommendations for #{(table || view).upcase}"
+  puts "=" * 50
+
+  recommendations = omg.index_recommendations
+
+  [:foreign_keys, :unique_constraints, :date_queries, :status_enum, :composite, :full_text].each do |category|
+    next if recommendations[category].empty?
+
+    puts "\n#{category.to_s.gsub('_', ' ').capitalize}:"
+    puts "-" * 30
+
+    recommendations[category].each do |rec|
+      puts "  #{rec[:sql]}"
+      puts "    # #{rec[:reason]}"
+      puts "    # Type: #{rec[:type]}" if rec[:type]
+      puts
+    end
+  end
+
+  # Generate a sample migration
+  unless recommendations.values.flatten.empty?
+    puts "\nSample Rails Migration:"
+    puts "=" * 25
+    migration_name = "AddIndexesTo#{omg.model.gsub(/([a-z])([A-Z])/, '\1\2').split(/(?=[A-Z])/).join}"
+    puts "class #{migration_name} < ActiveRecord::Migration[7.0]"
+    puts "  def change"
+
+    [:foreign_keys, :unique_constraints, :date_queries, :status_enum].each do |category|
+      next if recommendations[category].empty?
+      puts "    # #{category.to_s.gsub('_', ' ').capitalize}"
+      recommendations[category].each do |rec|
+        puts "    #{rec[:sql]}"
+      end
+      puts
+    end
+
+    recommendations[:composite].each do |rec|
+      puts "    #{rec[:sql]}  # #{rec[:reason]}"
+    end
+
+    unless recommendations[:full_text].empty?
+      puts "\n    # Full-text indexes require separate DDL:"
+      recommendations[:full_text].each do |rec|
+        puts "    # #{rec[:sql]}"
+      end
+    end
+
+    puts "  end"
+    puts "end"
+  else
+    puts "\nNo index recommendations found for this table."
+  end
+
+  omg.connection.logoff if omg.connection
+  exit
+end
+
 ofile = opts['o']
 
 unless ofile
@@ -152,6 +213,82 @@ File.open(ofile, 'w') do |fh|
     fh.puts "  set_primary_keys " + omg.primary_keys.inspect
   else
     fh.puts "\n  set_primary_key " + omg.primary_keys.first.to_sym.inspect unless omg.primary_keys.first.nil?
+  end
+
+  # Index Recommendations
+  fh.puts "\n  # Recommended Indexes (add these to your database migration):"
+  fh.puts "  # These indexes would improve query performance for this model\n"
+
+  # Foreign key indexes
+  foreign_key_columns = omg.belongs_to.map do |table|
+    # Convert table name to foreign key column name
+    fk_column = "#{table.downcase.gsub(/s$/, '')}_id"
+    omg.column_info.find { |col| col.name.downcase == fk_column }
+  end.compact
+
+  foreign_key_columns.each do |col|
+    fh.puts "  # add_index :#{table.downcase}, :#{col.name.downcase}  # Foreign key index for #{col.name}"
+  end
+
+  # Unique constraint indexes (for validation support)
+  unique_columns = omg.column_info.select do |col|
+    col.name.downcase =~ /(email|username|code|slug|uuid|token)/ ||
+    (!col.nullable? && col.name.downcase =~ /(name|title)$/ && col.data_type.to_s =~ /varchar/i)
+  end
+
+  unique_columns.each do |col|
+    fh.puts "  # add_index :#{table.downcase}, :#{col.name.downcase}, unique: true  # Unique constraint for #{col.name}"
+  end
+
+  # Date/timestamp indexes for common queries
+  date_columns = omg.column_info.select do |col|
+    col.data_type.to_s.downcase =~ /(date|timestamp)/ ||
+    col.name.downcase =~ /(created_at|updated_at|modified_date|start_date|end_date|due_date)/
+  end
+
+  date_columns.each do |col|
+    fh.puts "  # add_index :#{table.downcase}, :#{col.name.downcase}  # Date queries for #{col.name}"
+  end
+
+  # Status/enum column indexes
+  status_columns = omg.column_info.select do |col|
+    col.name.downcase =~ /(status|state|type|role|priority|level|category)$/ &&
+    col.data_type.to_s =~ /(varchar|char)/i
+  end
+
+  status_columns.each do |col|
+    fh.puts "  # add_index :#{table.downcase}, :#{col.name.downcase}  # Status/enum queries for #{col.name}"
+  end
+
+  # Composite indexes for common query patterns
+  if foreign_key_columns.any? && date_columns.any?
+    fk_col = foreign_key_columns.first
+    date_col = date_columns.find { |col| col.name.downcase =~ /created/ } || date_columns.first
+    fh.puts "  # add_index :#{table.downcase}, [:#{fk_col.name.downcase}, :#{date_col.name.downcase}]  # Composite index for filtering by #{fk_col.name} and #{date_col.name}"
+  end
+
+  if status_columns.any? && date_columns.any?
+    status_col = status_columns.first
+    date_col = date_columns.find { |col| col.name.downcase =~ /created/ } || date_columns.first
+    fh.puts "  # add_index :#{table.downcase}, [:#{status_col.name.downcase}, :#{date_col.name.downcase}]  # Composite index for filtering by #{status_col.name} and #{date_col.name}"
+  end
+
+  # Full-text search indexes
+  text_search_columns = omg.column_info.select do |col|
+    col.data_type.to_s.downcase =~ /(varchar|char|clob)/ &&
+    col.name.downcase =~ /(name|title|description|content|text|search)/ &&
+    (col.data_size.nil? || col.data_size > 50)  # Only larger text fields
+  end
+
+  if text_search_columns.any?
+    if text_search_columns.size == 1
+      col = text_search_columns.first
+      fh.puts "  # Consider adding a full-text search index for #{col.name}:"
+      fh.puts "  # Oracle: CREATE INDEX idx_#{table.downcase}_#{col.name.downcase}_text ON #{table.upcase} (#{col.name.upcase}) INDEXTYPE IS CTXSYS.CONTEXT"
+    else
+      cols = text_search_columns.map(&:name).map(&:downcase).join(', ')
+      fh.puts "  # Consider adding full-text search indexes for text columns: #{cols}"
+    end
   end
 
   fh.puts "\n  # Table relationships\n\n"

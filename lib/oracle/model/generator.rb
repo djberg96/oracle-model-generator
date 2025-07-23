@@ -141,6 +141,118 @@ module Oracle
         summary
       end
 
+      # Public method to get index recommendations for performance optimization
+      def index_recommendations
+        return {} unless generated?
+
+        recommendations = {
+          foreign_keys: [],
+          unique_constraints: [],
+          date_queries: [],
+          status_enum: [],
+          composite: [],
+          full_text: []
+        }
+
+        # Foreign key indexes
+        @belongs_to.each do |table|
+          fk_column = "#{table.downcase.gsub(/s$/, '')}_id"
+          col = @column_info.find { |c| c.name.downcase == fk_column }
+          if col
+            recommendations[:foreign_keys] << {
+              column: col.name.downcase,
+              sql: "add_index :#{@table.downcase}, :#{col.name.downcase}",
+              reason: "Foreign key index for #{col.name}"
+            }
+          end
+        end
+
+        # Unique constraint indexes
+        unique_columns = @column_info.select do |col|
+          col.name.downcase =~ /(email|username|code|slug|uuid|token)/ ||
+          (!col.nullable? && col.name.downcase =~ /(name|title)$/ && col.data_type.to_s =~ /varchar/i)
+        end
+
+        unique_columns.each do |col|
+          recommendations[:unique_constraints] << {
+            column: col.name.downcase,
+            sql: "add_index :#{@table.downcase}, :#{col.name.downcase}, unique: true",
+            reason: "Unique constraint for #{col.name}"
+          }
+        end
+
+        # Date/timestamp indexes
+        date_columns = @column_info.select do |col|
+          col.data_type.to_s.downcase =~ /(date|timestamp)/ ||
+          col.name.downcase =~ /(created_at|updated_at|modified_date|start_date|end_date|due_date)/
+        end
+
+        date_columns.each do |col|
+          recommendations[:date_queries] << {
+            column: col.name.downcase,
+            sql: "add_index :#{@table.downcase}, :#{col.name.downcase}",
+            reason: "Date queries for #{col.name}"
+          }
+        end
+
+        # Status/enum column indexes
+        status_columns = @column_info.select do |col|
+          col.name.downcase =~ /(status|state|type|role|priority|level|category)$/ &&
+          col.data_type.to_s =~ /(varchar|char)/i
+        end
+
+        status_columns.each do |col|
+          recommendations[:status_enum] << {
+            column: col.name.downcase,
+            sql: "add_index :#{@table.downcase}, :#{col.name.downcase}",
+            reason: "Status/enum queries for #{col.name}"
+          }
+        end
+
+        # Composite indexes for common query patterns
+        foreign_key_columns = recommendations[:foreign_keys].map { |fk| fk[:column] }
+        date_column_names = recommendations[:date_queries].map { |d| d[:column] }
+        status_column_names = recommendations[:status_enum].map { |s| s[:column] }
+
+        if foreign_key_columns.any? && date_column_names.any?
+          fk_col = foreign_key_columns.first
+          date_col = date_column_names.find { |col| col =~ /created/ } || date_column_names.first
+          recommendations[:composite] << {
+            columns: [fk_col, date_col],
+            sql: "add_index :#{@table.downcase}, [:#{fk_col}, :#{date_col}]",
+            reason: "Composite index for filtering by #{fk_col} and #{date_col}"
+          }
+        end
+
+        if status_column_names.any? && date_column_names.any?
+          status_col = status_column_names.first
+          date_col = date_column_names.find { |col| col =~ /created/ } || date_column_names.first
+          recommendations[:composite] << {
+            columns: [status_col, date_col],
+            sql: "add_index :#{@table.downcase}, [:#{status_col}, :#{date_col}]",
+            reason: "Composite index for filtering by #{status_col} and #{date_col}"
+          }
+        end
+
+        # Full-text search indexes
+        text_search_columns = @column_info.select do |col|
+          col.data_type.to_s.downcase =~ /(varchar|char|clob)/ &&
+          col.name.downcase =~ /(name|title|description|content|text|search)/ &&
+          (col.data_size.nil? || col.data_size > 50)
+        end
+
+        text_search_columns.each do |col|
+          recommendations[:full_text] << {
+            column: col.name.downcase,
+            sql: "CREATE INDEX idx_#{@table.downcase}_#{col.name.downcase}_text ON #{@table.upcase} (#{col.name.upcase}) INDEXTYPE IS CTXSYS.CONTEXT",
+            reason: "Full-text search for #{col.name}",
+            type: "Oracle Text Index"
+          }
+        end
+
+        recommendations
+      end
+
       private
 
       # Reset internal state - useful for error recovery
