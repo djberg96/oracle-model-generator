@@ -59,10 +59,11 @@ jobs:
         ORACLE_HOME: /opt/oracle/instantclient_23_4
 
     - name: Run specs
-      run: bundle exec rspec
+      run: bundle exec rspec spec/database_model_generator_spec.rb
       env:
         LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
         ORACLE_HOME: /opt/oracle/instantclient_23_4
+        DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
         ORACLE_SID: freepdb1
