@@ -9,7 +9,7 @@ RSpec.describe Oracle::Model::Generator do
 
   describe 'class information' do
     it 'has the correct version number' do
-      expect(Oracle::Model::Generator::VERSION).to eq('0.4.1')
+      expect(Oracle::Model::Generator::VERSION).to eq('0.5.0')
     end
   end
 
