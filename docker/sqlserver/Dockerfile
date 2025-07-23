@@ -9,15 +9,21 @@ ENV MSSQL_PID=Express
 # Expose SQL Server port
 EXPOSE 1433
 
+# Switch to root to create directories and copy files
+USER root
+
 # Create directory for initialization scripts
-RUN mkdir -p /usr/src/app
+RUN mkdir -p /opt/mssql-tools/scripts
 
 # Copy initialization scripts
-COPY init-db.sql /usr/src/app/
-COPY setup-db.sh /usr/src/app/
+COPY docker/sqlserver/init-db.sql /opt/mssql-tools/scripts/
+COPY docker/sqlserver/setup-db.sh /opt/mssql-tools/scripts/
 
 # Make setup script executable
-RUN chmod +x /usr/src/app/setup-db.sh
+RUN chmod +x /opt/mssql-tools/scripts/setup-db.sh
+
+# Switch back to mssql user
+USER mssql
 
 # Run SQL Server and setup script
-CMD /usr/src/app/setup-db.sh & /opt/mssql/bin/sqlservr
+CMD /opt/mssql-tools/scripts/setup-db.sh & /opt/mssql/bin/sqlservr

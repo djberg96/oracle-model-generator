@@ -1,8 +1,8 @@
 services:
   sqlserver:
     build:
-      context: ./docker/sqlserver
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: docker/sqlserver/Dockerfile
     container_name: omg_sqlserver
     ports:
       - "1433:1433"
@@ -24,14 +24,14 @@ services:
   # Optional: Add a container to test the generator
   omg_test:
     build:
-      context: .
+      context: ../../
       dockerfile: docker/test/Dockerfile
     container_name: omg_test_runner
     depends_on:
       sqlserver:
         condition: service_healthy
     volumes:
-      - .:/app
+      - ../../:/app
       - /app/vendor
     working_dir: /app
     environment:
