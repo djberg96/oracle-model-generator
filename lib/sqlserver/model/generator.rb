@@ -25,15 +25,15 @@ module SqlServer
 
       def check_table_exists(table)
         begin
-          sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?"
-          result = @connection.execute(sql, table)
+          sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '#{table}'"
+          result = @connection.execute(sql)
           row = result.first
           row && row.values.first > 0
         rescue => e
           puts "Error checking table existence: #{e.message}"
           false
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -49,11 +49,11 @@ module SqlServer
               IS_NULLABLE,
               COLUMN_DEFAULT
             FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = ?
+            WHERE TABLE_NAME = '#{@table}'
             ORDER BY ORDINAL_POSITION
           SQL
 
-          result = @connection.execute(sql, @table)
+          result = @connection.execute(sql)
           @column_info = []
 
           result.each do |row|
@@ -62,7 +62,7 @@ module SqlServer
         rescue => e
           raise "Error retrieving column information: #{e.message}"
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -73,11 +73,11 @@ module SqlServer
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
             JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
             JOIN INFORMATION_SCHEMA.COLUMNS c ON ccu.COLUMN_NAME = c.COLUMN_NAME AND ccu.TABLE_NAME = c.TABLE_NAME
-            WHERE tc.TABLE_NAME = ? AND tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+            WHERE tc.TABLE_NAME = '#{@table}' AND tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
             ORDER BY c.ORDINAL_POSITION
           SQL
 
-          result = @connection.execute(sql, @table)
+          result = @connection.execute(sql)
           @primary_keys = []
 
           result.each do |row|
@@ -86,7 +86,7 @@ module SqlServer
         rescue => e
           raise "Error retrieving primary keys: #{e.message}"
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -96,10 +96,10 @@ module SqlServer
             SELECT ccu.COLUMN_NAME
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
             JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
-            WHERE tc.TABLE_NAME = ? AND tc.CONSTRAINT_TYPE = 'FOREIGN KEY'
+            WHERE tc.TABLE_NAME = '#{@table}' AND tc.CONSTRAINT_TYPE = 'FOREIGN KEY'
           SQL
 
-          result = @connection.execute(sql, @table)
+          result = @connection.execute(sql)
           @foreign_keys = []
 
           result.each do |row|
@@ -108,7 +108,7 @@ module SqlServer
         rescue => e
           raise "Error retrieving foreign keys: #{e.message}"
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -123,10 +123,10 @@ module SqlServer
             FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
             LEFT JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu ON tc.CONSTRAINT_NAME = ccu.CONSTRAINT_NAME
             LEFT JOIN INFORMATION_SCHEMA.CHECK_CONSTRAINTS cc ON tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
-            WHERE tc.TABLE_NAME = ?
+            WHERE tc.TABLE_NAME = '#{@table}'
           SQL
 
-          result = @connection.execute(sql, @table)
+          result = @connection.execute(sql)
           @constraints = []
 
           result.each do |row|
@@ -140,7 +140,7 @@ module SqlServer
         rescue => e
           raise "Error retrieving constraints: #{e.message}"
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -152,10 +152,10 @@ module SqlServer
               'TABLE' AS TYPE
             FROM sys.sql_expression_dependencies sed
             JOIN sys.objects o ON sed.referenced_id = o.object_id
-            WHERE o.name = ? AND o.type = 'U'
+            WHERE o.name = '#{@table}' AND o.type = 'U'
           SQL
 
-          result = @connection.execute(sql, @table)
+          result = @connection.execute(sql)
           @dependencies = []
 
           result.each do |row|
@@ -168,7 +168,7 @@ module SqlServer
           # Dependencies query may fail on some SQL Server versions, continue without error
           @dependencies = []
         ensure
-          result.cancel if result
+          result.cancel if result && result.respond_to?(:cancel)
         end
       end
 
@@ -220,16 +220,18 @@ module SqlServer
             FROM sys.foreign_keys f
             JOIN sys.foreign_key_columns fc ON f.object_id = fc.constraint_object_id
             JOIN sys.columns c ON fc.parent_object_id = c.object_id AND fc.parent_column_id = c.column_id
-            WHERE f.parent_object_id = OBJECT_ID(?) AND c.name = ?
+            WHERE f.parent_object_id = OBJECT_ID('#{@table}') AND c.name = '#{fk}'
           SQL
 
-          result = @connection.execute(sql, @table, fk)
+          result = @connection.execute(sql)
           row = result.first
           if row && row['referenced_table']
             return row['referenced_table'].downcase
           end
         rescue => e
           # Fall back to naming convention if query fails
+        ensure
+          result.cancel if result && result.respond_to?(:cancel)
         end
 
         # Fallback to naming convention
