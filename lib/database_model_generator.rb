@@ -54,7 +54,7 @@ module DatabaseModel
     class Base
       attr_reader :connection, :constraints, :foreign_keys, :belongs_to
       attr_reader :table, :model, :view, :dependencies, :column_info, :primary_keys
-      attr_reader :polymorphic_associations
+      attr_reader :polymorphic_associations, :enum_columns
 
       def initialize(connection)
         raise ArgumentError, "Connection cannot be nil" if connection.nil?
@@ -67,6 +67,7 @@ module DatabaseModel
         @dependencies = []
         @belongs_to   = []
         @polymorphic_associations = []
+        @enum_columns = []
         @column_info  = []
         @table        = nil
         @model        = nil
@@ -84,8 +85,9 @@ module DatabaseModel
         get_primary_keys
         get_foreign_keys unless view
         get_belongs_to
-        get_polymorphic_associations unless view
         get_constraints unless view
+        get_polymorphic_associations unless view
+        get_enum_columns unless view
         get_dependencies unless view
 
         self
@@ -195,6 +197,7 @@ module DatabaseModel
         @dependencies.clear
         @belongs_to.clear
         @polymorphic_associations.clear
+        @enum_columns.clear
         @column_info.clear
       end
 
@@ -212,6 +215,186 @@ module DatabaseModel
       def get_polymorphic_associations
         @polymorphic_associations = detect_polymorphic_associations
       end
+
+      def get_enum_columns
+        @enum_columns = detect_enum_columns
+      end
+
+      def detect_enum_columns
+        enum_columns = []
+
+        @column_info.each do |col|
+          next unless is_string_type?(col)
+
+          column_name = col.name.downcase
+
+          # Check for common enum-like column names
+          if enum_candidate?(column_name)
+            enum_info = {
+              name: col.name,
+              column_name: column_name,
+              suggested_values: suggest_enum_values(column_name),
+              type: determine_enum_type(column_name)
+            }
+
+            # Try to get actual values from constraints if available
+            constraint_values = extract_constraint_values(col.name)
+            if constraint_values.any?
+              enum_info[:values] = constraint_values
+              enum_info[:source] = 'check_constraint'
+            else
+              enum_info[:values] = enum_info[:suggested_values]
+              enum_info[:source] = 'pattern_matching'
+            end
+
+            enum_columns << enum_info
+          end
+        end
+
+        enum_columns
+      end
+
+      private
+
+      def enum_candidate?(column_name)
+        # Common enum column patterns
+        enum_patterns = [
+          /^status$/,
+          /^state$/,
+          /^type$/,
+          /^role$/,
+          /^priority$/,
+          /^level$/,
+          /^category$/,
+          /^kind$/,
+          /^mode$/,
+          /^visibility$/,
+          /_status$/,
+          /_state$/,
+          /_type$/,
+          /_role$/,
+          /_priority$/,
+          /_level$/,
+          /_category$/,
+          /_kind$/,
+          /_mode$/
+        ]
+
+        enum_patterns.any? { |pattern| column_name =~ pattern }
+      end
+
+      def suggest_enum_values(column_name)
+        # Suggest common enum values based on column name patterns
+        case column_name
+        when /status/
+          %w[active inactive pending approved rejected]
+        when /state/
+          %w[draft published archived]
+        when /priority/
+          %w[low medium high critical]
+        when /level/
+          %w[beginner intermediate advanced expert]
+        when /role/
+          %w[user admin moderator]
+        when /visibility/
+          %w[public private protected]
+        when /category/
+          %w[general news updates]
+        when /type/
+          %w[standard premium basic]
+        when /mode/
+          %w[automatic manual]
+        else
+          %w[option1 option2 option3]
+        end
+      end
+
+      def determine_enum_type(column_name)
+        # Determine if enum should use string or integer values
+        case column_name
+        when /status|state|priority|level|role|visibility/
+          :string  # These are better as string enums for readability
+        when /type|category|kind|mode/
+          :string  # These are also better as strings
+        else
+          :integer # Default to integer for performance
+        end
+      end
+
+      def extract_constraint_values(column_name)
+        # Try to extract enum values from CHECK constraints
+        values = []
+
+        puts "DEBUG: Looking for constraints for column: #{column_name}" if ENV['DEBUG']
+        puts "DEBUG: Available constraints: #{@constraints.length}" if ENV['DEBUG']
+
+        @constraints.each do |constraint|
+          puts "DEBUG: Checking constraint: #{constraint.inspect}" if ENV['DEBUG']
+          if constraint_applies_to_column?(constraint, column_name)
+            puts "DEBUG: Constraint applies to column #{column_name}" if ENV['DEBUG']
+            constraint_values = parse_check_constraint_values(constraint)
+            values.concat(constraint_values) if constraint_values.any?
+          end
+        end
+
+        puts "DEBUG: Final extracted values for #{column_name}: #{values.inspect}" if ENV['DEBUG']
+        values.uniq
+      end
+
+      def constraint_applies_to_column?(constraint, column_name)
+        # Check if constraint applies to the specific column
+        constraint_column = get_constraint_column_name(constraint)
+        return false unless constraint_column
+
+        constraint_column.downcase == column_name.downcase
+      end
+
+      def parse_check_constraint_values(constraint)
+        # Parse CHECK constraint to extract possible enum values
+        # This is database-specific and may need to be overridden
+        values = []
+
+        # Look for patterns like: column IN ('value1', 'value2', 'value3')
+        # or: column = 'value1' OR column = 'value2'
+        # or SQL Server: [column] IS NOT DISTINCT FROM 'value1' OR [column] IS NOT DISTINCT FROM 'value2'
+        constraint_text = get_constraint_text(constraint)
+        return values unless constraint_text
+
+        puts "DEBUG: Parsing constraint: #{constraint_text}" if ENV['DEBUG']
+
+        # Extract values from IN clause
+        in_match = constraint_text.match(/IN\s*\(\s*([^)]+)\s*\)/i)
+        if in_match
+          values_text = in_match[1]
+          # Extract quoted strings
+          values = values_text.scan(/'([^']+)'/).flatten
+          puts "DEBUG: Found IN values: #{values.inspect}" if ENV['DEBUG']
+        else
+          # Extract values from OR conditions (standard format)
+          or_matches = constraint_text.scan(/=\s*'([^']+)'/i)
+          if or_matches.any?
+            values = or_matches.flatten
+            puts "DEBUG: Found OR values: #{values.inspect}" if ENV['DEBUG']
+          else
+            # Extract values from SQL Server IS NOT DISTINCT FROM format
+            distinct_matches = constraint_text.scan(/IS NOT DISTINCT FROM\s+'([^']+)'/i)
+            if distinct_matches.any?
+              values = distinct_matches.flatten
+              puts "DEBUG: Found DISTINCT values: #{values.inspect}" if ENV['DEBUG']
+            end
+          end
+        end
+
+        values
+      end
+
+      def get_constraint_text(constraint)
+        # This should be overridden by database-specific implementations
+        # to return the actual constraint text/condition
+        nil
+      end
+
+      public
 
       def detect_polymorphic_associations
         polymorphic_assocs = []
@@ -246,6 +429,44 @@ module DatabaseModel
 
       def has_polymorphic_associations?
         !@polymorphic_associations.empty?
+      end
+
+      def has_enum_columns?
+        !@enum_columns.empty?
+      end
+
+      def enum_column_names
+        @enum_columns.map { |enum_col| enum_col[:name] }
+      end
+
+      def enum_definitions
+        # Generate Rails enum definitions
+        definitions = []
+        @enum_columns.each do |enum_col|
+          if enum_col[:type] == :integer
+            # Integer enum: { draft: 0, published: 1, archived: 2 }
+            values = enum_col[:values].each_with_index.map { |val, idx| "#{val}: #{idx}" }.join(', ')
+            definitions << "enum #{enum_col[:column_name]}: { #{values} }"
+          else
+            # String enum: { low: 'low', medium: 'medium', high: 'high' }
+            values = enum_col[:values].map { |val| "#{val}: '#{val}'" }.join(', ')
+            definitions << "enum #{enum_col[:column_name]}: { #{values} }"
+          end
+        end
+        definitions
+      end
+
+      def enum_validation_suggestions
+        # Suggest validations for enum columns
+        suggestions = []
+        @enum_columns.each do |enum_col|
+          suggestions << {
+            column: enum_col[:column_name],
+            validation: "validates :#{enum_col[:column_name]}, inclusion: { in: #{enum_col[:column_name].pluralize}.keys }",
+            description: "Validates #{enum_col[:column_name]} is a valid enum value"
+          }
+        end
+        suggestions
       end
 
       def polymorphic_association_names
