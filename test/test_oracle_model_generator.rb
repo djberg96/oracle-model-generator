@@ -1,5 +1,5 @@
 #############################################################################
-# test_oracle_model_generator_docker.rb
+# test_oracle_model_generator.rb
 #
 # Test suite for the oracle-model-generator library adapted for Docker.
 # This version uses environment variables for database connection and

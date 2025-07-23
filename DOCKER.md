@@ -47,9 +47,6 @@ bundle exec ruby test/docker_environment_test.rb
 # Run the test suite
 bundle exec ruby test/test_oracle_model_generator.rb
 
-# Run the Docker-adapted test suite (uses environment variables)
-bundle exec ruby test/test_oracle_model_generator_docker.rb
-
 # Test the command-line tool
 bundle exec ruby -Ilib bin/omg --help
 
