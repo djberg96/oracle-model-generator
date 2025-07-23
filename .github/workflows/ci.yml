@@ -51,12 +51,12 @@ jobs:
         sudo unzip instantclient-sdk-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
         echo "/opt/oracle/instantclient_23_4" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
+        # Set environment variables for subsequent steps
+        echo "LD_LIBRARY_PATH=/opt/oracle/instantclient_23_4" >> $GITHUB_ENV
+        echo "ORACLE_HOME=/opt/oracle/instantclient_23_4" >> $GITHUB_ENV
 
     - name: Install gems
       run: bundle install
-      env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
-        ORACLE_HOME: /opt/oracle/instantclient_23_4
 
     - name: Run specs
       run: bundle exec rspec spec/database_model_generator_spec.rb
