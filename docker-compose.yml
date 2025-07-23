@@ -27,7 +27,7 @@ services:
     environment:
       - ORACLE_HOST=oracle-db
       - ORACLE_PORT=1521
-      - ORACLE_SID=XE
+      - ORACLE_SID=freepdb1
       - ORACLE_USER=hr
       - ORACLE_PASSWORD=hr
     volumes:
@@ -35,7 +35,7 @@ services:
     working_dir: /app
     stdin_open: true
     tty: true
-    command: /app/run_tests.sh
+    command: ["rake"]  # This will run tests with automatic setup
 
 volumes:
   oracle_data:
