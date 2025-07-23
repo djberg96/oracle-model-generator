@@ -1,8 +1,16 @@
 require 'rake'
-require 'rake/testtask'
 require 'rake/clean'
+require 'rspec/core/rake_task'
 
 CLEAN.include("**/*.gem", "**/*.rbc", "**/*.log", "**/*.lock")
+
+RSpec::Core::RakeTask.new(:spec) do |t|
+  t.pattern = 'spec/**/*_spec.rb'
+  t.rspec_opts = ['--format', 'documentation', '--color']
+end
+  
+desc 'Run RSpec tests'
+task :rspec => :spec
 
 namespace 'gem' do
   desc 'Create the oracle-model-generator gem'
@@ -20,9 +28,5 @@ namespace 'gem' do
   end
 end
 
-Rake::TestTask.new do |t|
-  t.warning = true
-  t.verbose = true
-end
-
-task :default => :test
+# Set default task to run both test suites
+task :default => [:spec]

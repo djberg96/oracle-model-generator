@@ -1,3 +1,9 @@
+## 0.5.0 - 22-Jul-2025
+* Added docker related files, so you can now fire up an Oracle container and
+  run the specs against that.
+* Replaced test-unit with rspec.
+* Changed the license to Apache-2.0.
+
 ## 0.4.1 - 1-Feb-2016
 * This gem is now signed.
 * Updated the gem related tasks in the Rakefile.

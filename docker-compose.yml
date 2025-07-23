@@ -1,0 +1,41 @@
+services:
+  # Oracle Express Edition database for testing
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    environment:
+      - ORACLE_PASSWORD=oracle
+      - APP_USER=hr
+      - APP_USER_PASSWORD=hr
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Oracle Model Generator testing environment
+  oracle-model-generator:
+    build: .
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    environment:
+      - ORACLE_HOST=oracle-db
+      - ORACLE_PORT=1521
+      - ORACLE_SID=freepdb1
+      - ORACLE_USER=hr
+      - ORACLE_PASSWORD=hr
+    volumes:
+      - .:/app
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: ["rake"]  # This will run tests with automatic setup
+
+volumes:
+  oracle_data:

@@ -102,6 +102,12 @@ end
 * ruby-oci8
 * getopt
 
+## Running the specs
+Run `docker-compose run --rm oracle-model-generator bundle exec rspec`.
+
+You may need to use sudo. No guarantees on MacOS because of known issues
+with the Oracle instant client.
+
 ## Optional Libraries
 If you want to be able to avoid specifying a username and password on the
 command line then you will need the `dbi-dbrc` library.
@@ -153,11 +159,11 @@ implied warranties, including, without limitation, the implied
 warranties of merchantability and fitness for a particular purpose.
 
 ## Copyright
-(C) 2010-2021 Daniel J. Berger
+(C) 2010-2025 Daniel J. Berger
 All Rights Reserved
 
 ## License
-Artistic-2.0
+Apache-2.0
 
 ## Author
 Daniel J. Berger
