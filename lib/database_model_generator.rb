@@ -54,6 +54,7 @@ module DatabaseModel
     class Base
       attr_reader :connection, :constraints, :foreign_keys, :belongs_to
       attr_reader :table, :model, :view, :dependencies, :column_info, :primary_keys
+      attr_reader :polymorphic_associations
 
       def initialize(connection)
         raise ArgumentError, "Connection cannot be nil" if connection.nil?
@@ -65,6 +66,7 @@ module DatabaseModel
         @foreign_keys = []
         @dependencies = []
         @belongs_to   = []
+        @polymorphic_associations = []
         @column_info  = []
         @table        = nil
         @model        = nil
@@ -82,6 +84,7 @@ module DatabaseModel
         get_primary_keys
         get_foreign_keys unless view
         get_belongs_to
+        get_polymorphic_associations unless view
         get_constraints unless view
         get_dependencies unless view
 
@@ -191,6 +194,7 @@ module DatabaseModel
         @foreign_keys.clear
         @dependencies.clear
         @belongs_to.clear
+        @polymorphic_associations.clear
         @column_info.clear
       end
 
@@ -204,6 +208,92 @@ module DatabaseModel
       def get_belongs_to
         @belongs_to = @foreign_keys.map { |fk| find_fk_table(fk) }.compact
       end
+
+      def get_polymorphic_associations
+        @polymorphic_associations = detect_polymorphic_associations
+      end
+
+      def detect_polymorphic_associations
+        polymorphic_assocs = []
+        column_names = @column_info.map { |col| col.name.downcase }
+
+        # Look for patterns like: commentable_type + commentable_id
+        # or imageable_type + imageable_id, etc.
+        type_columns = column_names.select { |name| name.end_with?('_type') }
+
+        type_columns.each do |type_col|
+          base_name = type_col.gsub(/_type$/, '')
+          id_col = "#{base_name}_id"
+
+          if column_names.include?(id_col)
+            # Check if this isn't already a regular foreign key
+            unless @foreign_keys.map(&:downcase).include?(id_col)
+              polymorphic_assocs << {
+                name: base_name,
+                foreign_key: id_col,
+                foreign_type: type_col,
+                association_name: base_name
+              }
+            end
+          end
+        end
+
+        polymorphic_assocs
+      end
+
+      # Make sure these polymorphic methods are public
+      public
+
+      def has_polymorphic_associations?
+        !@polymorphic_associations.empty?
+      end
+
+      def polymorphic_association_names
+        @polymorphic_associations.map { |assoc| assoc[:name] }
+      end
+
+      def polymorphic_has_many_suggestions
+        # Suggest has_many associations for models that could be polymorphic parents
+        suggestions = []
+        @polymorphic_associations.each do |assoc|
+          # For a 'commentable' polymorphic association, suggest:
+          # has_many :comments, as: :commentable, dependent: :destroy
+          child_model = pluralize_for_has_many(assoc[:name])
+          suggestions << {
+            association: "has_many :#{child_model}, as: :#{assoc[:name]}, dependent: :destroy",
+            description: "For models that can have #{child_model} (polymorphic)"
+          }
+        end
+        suggestions
+      end
+
+      def find_fk_table(fk)
+        # Default implementation - may be overridden by subclasses
+        fk.gsub(/_id$/i, '').pluralize rescue "#{fk.gsub(/_id$/i, '')}s"
+      end
+
+      private
+
+      def pluralize_for_has_many(singular_name)
+        # Simple pluralization - can be enhanced
+        case singular_name
+        when /able$/
+          # commentable -> comments, imageable -> images
+          base = singular_name.gsub(/able$/, '')
+          case base
+          when 'comment' then 'comments'
+          when 'image' then 'images'
+          when 'tag' then 'tags'
+          when 'like' then 'likes'
+          when 'favorite' then 'favorites'
+          else "#{base}s"
+          end
+        else
+          "#{singular_name}s"
+        end
+      end
+
+      public
 
       def find_fk_table(fk)
         # Default implementation - may be overridden by subclasses
