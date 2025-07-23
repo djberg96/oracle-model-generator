@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'oracle/model/generator'
+require_relative '../lib/database_model_generator'
 require 'getopt/long'
 
 begin
@@ -21,13 +21,17 @@ opts = Getopt::Long.getopts(
   ['--output',   '-o', Getopt::REQUIRED],
   ['--rails',    '-r', Getopt::REQUIRED],
   ['--tests',    '-x', Getopt::OPTIONAL],
-  ['--class',    '-c', Getopt::OPTIONAL]
+  ['--class',    '-c', Getopt::OPTIONAL],
+  ['--indexes',  '-i'],
+  ['--type',     '-T', Getopt::REQUIRED],
+  ['--server',   '-s', Getopt::REQUIRED],
+  ['--port',     '-P', Getopt::REQUIRED]
 )
 
 def help
-  version = Oracle::Model::Generator::VERSION
+  version = DatabaseModel::Generator::VERSION
   %Q{
-    Available options for the Oracle Model Generator (version #{version}) are:
+    Available options for the Database Model Generator (version #{version}) are:
 
     -h, --help     => Display the help text you're looking at now.
     -t, --table    => The name of the table you wish to model.
@@ -35,11 +39,27 @@ def help
     -o, --output   => The name of the file to create.
     -u, --user     => The username used to establish a connection to the database.
     -p, --password => The password used to establish a connection to the database.
+    -d, --database => The name of the database to connect to.
+    -s, --server   => The database server hostname (for SQL Server).
+    -P, --port     => The database server port (default: 1433 for SQL Server).
+    -T, --type     => Database type: 'oracle' or 'sqlserver' (auto-detected if not specified).
     -r, --rails    => The version of rails you're using (2 or higher).
     -x, --tests    => Generate tests using testunit, minitest or rspec.
     -c, --class    => Class name for the generated table (optional)
 
-    If no user or password are supplied, then OMG will attempt to glean that
+    Database Connection Examples:
+
+    Oracle (traditional):
+    dmg -T oracle -d localhost:1521/XE -u scott -p tiger -t users
+
+    SQL Server:
+    dmg -T sqlserver -s localhost -P 1433 -d mydb -u sa -p password -t users
+
+    Auto-detection (Oracle if no server specified, SQL Server if server specified):
+    dmg -d localhost:1521/XE -u scott -p tiger -t users        # Oracle
+    dmg -s localhost -d mydb -u sa -p password -t users        # SQL Server
+
+    If no user or password are supplied, then the generator will attempt to glean that
     information using a combination of the database name and your .dbrc file.
     If that cannot be found, then an error is raised.
 
@@ -57,16 +77,16 @@ def help
     Examples:
 
     # Create a User model for the users table (current rails)
-    omg -d some_database -u scott -p tiger -t users
+    dmg -d some_database -u scott -p tiger -t users
 
     # Create a User model for the users table (rails 2)
-    omg -d some_database -r 2 -u scott -p tiger -t users
+    dmg -d some_database -r 2 -u scott -p tiger -t users
 
     # Same thing, using dbi-dbrc behind the scenes
-    omg -d some_database -t users
+    dmg -d some_database -t users
 
     # Create a Lily model for the lilies table, and specify the output file.
-    omg -d some_database -u scott -p tiger -t lilies -o lily.rb
+    dmg -d some_database -u scott -p tiger -t lilies -o lily.rb
   }
 end
 
@@ -87,6 +107,21 @@ end
 
 user = opts['user']
 pass = opts['password']
+
+# Determine database type
+database_type = opts['type']&.downcase
+unless database_type
+  if opts['server'] || opts['port']
+    database_type = 'sqlserver'
+  else
+    database_type = 'oracle'  # Default to Oracle for backward compatibility
+  end
+end
+
+unless ['oracle', 'sqlserver'].include?(database_type)
+  puts "Invalid database type: #{database_type}. Must be 'oracle' or 'sqlserver'."
+  exit!
+end
 
 unless user && pass
   begin
@@ -115,10 +150,101 @@ if table && view
   exit!
 end
 
-connection = OCI8.new(user, pass, opts['database'])
-omg = Oracle::Model::Generator.new(connection)
+# Create database connection based on type
+connection = nil
+begin
+  case database_type
+  when 'oracle'
+    require 'oci8'
+    connection = OCI8.new(user, pass, opts['database'])
+  when 'sqlserver'
+    require 'tiny_tds'
+    server = opts['server'] || 'localhost'
+    port = opts['port'] || 1433
+
+    connection = TinyTds::Client.new(
+      username: user,
+      password: pass,
+      host: server,
+      port: port.to_i,
+      database: opts['database']
+    )
+  end
+rescue LoadError => e
+  case database_type
+  when 'oracle'
+    puts "Oracle support requires the 'oci8' gem. Install with: gem install oci8"
+  when 'sqlserver'
+    puts "SQL Server support requires the 'tiny_tds' gem. Install with: gem install tiny_tds"
+  end
+  exit!
+rescue => e
+  puts "Failed to connect to #{database_type.capitalize} database: #{e.message}"
+  exit!
+end
+
+# Create the appropriate generator
+omg = DatabaseModel::Generator.new(connection, type: database_type)
 omg.generate(table || view, view)
 
+# If user only wants index recommendations, show them and exit
+if opts['indexes']
+  puts "Index Recommendations for #{(table || view).upcase}"
+  puts "=" * 50
+
+  recommendations = omg.index_recommendations
+
+  [:foreign_keys, :unique_constraints, :date_queries, :status_enum, :composite, :full_text].each do |category|
+    next if recommendations[category].empty?
+
+    puts "\n#{category.to_s.gsub('_', ' ').capitalize}:"
+    puts "-" * 30
+
+    recommendations[category].each do |rec|
+      puts "  #{rec[:sql]}"
+      puts "    # #{rec[:reason]}"
+      puts "    # Type: #{rec[:type]}" if rec[:type]
+      puts
+    end
+  end
+
+  # Generate a sample migration
+  unless recommendations.values.flatten.empty?
+    puts "\nSample Rails Migration:"
+    puts "=" * 25
+    migration_name = "AddIndexesTo#{omg.model.gsub(/([a-z])([A-Z])/, '\1\2').split(/(?=[A-Z])/).join}"
+    puts "class #{migration_name} < ActiveRecord::Migration[7.0]"
+    puts "  def change"
+
+    [:foreign_keys, :unique_constraints, :date_queries, :status_enum].each do |category|
+      next if recommendations[category].empty?
+      puts "    # #{category.to_s.gsub('_', ' ').capitalize}"
+      recommendations[category].each do |rec|
+        puts "    #{rec[:sql]}"
+      end
+      puts
+    end
+
+    recommendations[:composite].each do |rec|
+      puts "    #{rec[:sql]}  # #{rec[:reason]}"
+    end
+
+    unless recommendations[:full_text].empty?
+      puts "\n    # Full-text indexes require separate DDL:"
+      recommendations[:full_text].each do |rec|
+        puts "    # #{rec[:sql]}"
+      end
+    end
+
+    puts "  end"
+    puts "end"
+  else
+    puts "\nNo index recommendations found for this table."
+  end
+
+  omg.disconnect if omg.respond_to?(:disconnect)
+  exit
+end
 ofile = opts['o']
 
 unless ofile
@@ -138,6 +264,12 @@ end
 omg.instance_eval { @model = opts['class'] } if opts['class'] # dirty fix
 
 File.open(ofile, 'w') do |fh|
+  fh.puts "# Generated by Database Model Generator v#{DatabaseModel::Generator::VERSION}"
+  fh.puts "# Table: #{table.upcase}"
+  fh.puts "# Generated on: #{Time.now.strftime('%Y-%m-%d %H:%M:%S')}"
+  fh.puts
+  fh.puts "require 'securerandom' if defined?(SecureRandom)"
+  fh.puts
   fh.puts "class #{omg.model} < ActiveRecord::Base"
   fh.puts "  set_table_name \"#{table}\""
 
@@ -672,6 +804,6 @@ else
   end
 end
 
-omg.connection.logoff if omg.connection
+omg.disconnect if omg.respond_to?(:disconnect)
 
 puts "\nFile '#{ofile}' generated\n\n"
