@@ -5,13 +5,22 @@ to turn it over to someone who is. If you are interested please contact me,
 and we can discuss transferring the repository.
 
 ## Description
-A library for generating an ActiveRecord model from an existing Oracle table.
-This will install an "omg" executable that you can use from the command line.
+A library for generating an ActiveRecord model from an existing database table.
+Supports both Oracle and SQL Server databases.
+This will install a "dmg" (Database Model Generator) executable that you can use from the command line.
 
 ## Synopsis
 Using the command line tool:
 
-`omg -d your_database -t locations -u some_user -p some_password`
+### Oracle:
+`dmg -T oracle -d your_database -t locations -u some_user -p some_password`
+
+### SQL Server:
+`dmg -T sqlserver -s localhost -d your_database -t locations -u sa -p your_password`
+
+### Auto-detection:
+`dmg -d your_database -t locations -u some_user -p some_password`  # Oracle (default)
+`dmg -s localhost -d your_database -t locations -u sa -p password`  # SQL Server (detected)
 
 The above command results in a file called "location.rb". This is an
 ActiveRecord model declaration, with all validations, primary keys,
@@ -22,7 +31,7 @@ If your LOCATIONS table looks like this:
 ```sql
 create table locations(
   location_id number(4,0) primary key,
-  street_address varchar2(40), 
+  street_address varchar2(40),
   postal_code varchar2(12),
   city varchar2(30) not null
   state_province varchar2(25),
@@ -32,7 +41,7 @@ create table locations(
 )
 ```
 
-The omg library will generate this:
+The dmg library will generate this:
 
 ```ruby
 class Location < ActiveRecord::Base
@@ -44,9 +53,9 @@ class Location < ActiveRecord::Base
   belongs_to :countries
 
   # Validations
-  
+
   validates :location_id, :presence => true, :numericality => {
-    :less_than_or_equal_to => 9999, 
+    :less_than_or_equal_to => 9999,
     :greater_than_or_equal_to => -9999,
     :only_integer => true
   }
@@ -99,14 +108,23 @@ end
 ```
 
 ## Requirements
+**For Oracle:**
 * ruby-oci8
 * getopt
 
+**For SQL Server:**
+* tiny_tds
+* getopt
+
 ## Running the specs
-Run `docker-compose run --rm oracle-model-generator bundle exec rspec`.
+### Oracle:
+Run `cd docker/oracle && docker-compose run --rm oracle-model-generator bundle exec rspec`.
+
+### SQL Server:
+Run `cd docker/sqlserver && ./test.sh` to start SQL Server, then run tests.
 
 You may need to use sudo. No guarantees on MacOS because of known issues
-with the Oracle instant client.
+with database client libraries.
 
 ## Optional Libraries
 If you want to be able to avoid specifying a username and password on the
@@ -122,7 +140,7 @@ If you want date format validations, then you will need to install the
 I do not attempt to set `has_many` or `has_one` relationships. There's no good
 way to determine that relationship (one or many?). Besides, in practice I
 find that most people set custom has_xxx relationships that go over and
-above what's set in the Oracle database anyway for purposes of their
+above what's set in the database anyway for purposes of their
 application.
 
 I also do not go out of my way to get the model name correct with regards
@@ -133,12 +151,24 @@ file name than it is for me to get this 100% correct.
 As of 0.3.1 there's also the `--class` option that let's you explicitly
 set it if you like.
 
+## Database Support
+* **Oracle**: Full support via ruby-oci8
+* **SQL Server**: Full support via tiny_tds
+* **Auto-detection**: Automatically detects database type based on connection parameters
+
 ## Author's Comments
-I chose not to patch the `legacy_data` library because I have no interest in
-supporting other vendors other than Oracle with this library. By focusing only
-on Oracle I could take advantage of ruby-oci8 features. In addition, I have no
-interest in making this a Rails plugin, and I needed the support of multiple
-primary keys.
+Originally focused only on Oracle, this library has been expanded to support
+SQL Server as well. The architecture now supports multiple database vendors
+while maintaining backward compatibility. By supporting specific database
+vendors (Oracle and SQL Server), we can take advantage of database-specific
+features and optimizations.
+
+## Current Features
+* **Multi-database support**: Oracle and SQL Server
+* **Auto-detection**: Automatically detects database type
+* **Index recommendations**: Suggests optimal indexes for your tables
+* **Multiple test frameworks**: Supports test-unit, minitest, and rspec
+* **Docker support**: Complete Docker environments for testing both databases
 
 ## Future Plans (originally)
 * Add support for views.

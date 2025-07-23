@@ -50,14 +50,14 @@ def help
     Database Connection Examples:
 
     Oracle (traditional):
-    omg -T oracle -d localhost:1521/XE -u scott -p tiger -t users
+    dmg -T oracle -d localhost:1521/XE -u scott -p tiger -t users
 
     SQL Server:
-    omg -T sqlserver -s localhost -P 1433 -d mydb -u sa -p password -t users
+    dmg -T sqlserver -s localhost -P 1433 -d mydb -u sa -p password -t users
 
     Auto-detection (Oracle if no server specified, SQL Server if server specified):
-    omg -d localhost:1521/XE -u scott -p tiger -t users        # Oracle
-    omg -s localhost -d mydb -u sa -p password -t users        # SQL Server
+    dmg -d localhost:1521/XE -u scott -p tiger -t users        # Oracle
+    dmg -s localhost -d mydb -u sa -p password -t users        # SQL Server
 
     If no user or password are supplied, then the generator will attempt to glean that
     information using a combination of the database name and your .dbrc file.
@@ -77,16 +77,16 @@ def help
     Examples:
 
     # Create a User model for the users table (current rails)
-    omg -d some_database -u scott -p tiger -t users
+    dmg -d some_database -u scott -p tiger -t users
 
     # Create a User model for the users table (rails 2)
-    omg -d some_database -r 2 -u scott -p tiger -t users
+    dmg -d some_database -r 2 -u scott -p tiger -t users
 
     # Same thing, using dbi-dbrc behind the scenes
-    omg -d some_database -t users
+    dmg -d some_database -t users
 
     # Create a Lily model for the lilies table, and specify the output file.
-    omg -d some_database -u scott -p tiger -t lilies -o lily.rb
+    dmg -d some_database -u scott -p tiger -t lilies -o lily.rb
   }
 end
 

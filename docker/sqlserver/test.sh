@@ -53,4 +53,4 @@ echo "  docker-compose down"
 echo
 echo "To test model generation:"
 echo "  cd ../../"
-echo "  bin/omg --type sqlserver --server localhost --port 1433 --user sa --password TestPassword123! --database testdb --table <table_name>"
+echo "  bin/dmg --type sqlserver --server localhost --port 1433 --user sa --password TestPassword123! --database testdb --table <table_name>"

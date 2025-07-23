@@ -40,10 +40,10 @@ gem install getopt
 
 ```bash
 # Explicit database type specification
-./bin/omg -T <type> [connection_options] -t <table> [other_options]
+./bin/dmg -T <type> [connection_options] -t <table> [other_options]
 
 # Auto-detection based on connection parameters
-./bin/omg [connection_options] -t <table> [other_options]
+./bin/dmg [connection_options] -t <table> [other_options]
 ```
 
 ### SQL Server Examples
@@ -51,32 +51,32 @@ gem install getopt
 #### Basic Model Generation
 ```bash
 # Generate Employee model from SQL Server
-./bin/omg -T sqlserver -s localhost -P 1433 -d northwind -u sa -p password -t Employees
+./bin/dmg -T sqlserver -s localhost -P 1433 -d northwind -u sa -p password -t Employees
 
 # Auto-detect SQL Server (when server specified)
-./bin/omg -s myserver -d adventureworks -u user -p pass -t Customers
+./bin/dmg -s myserver -d adventureworks -u user -p pass -t Customers
 ```
 
 #### Index Recommendations Only
 ```bash
 # Show only performance recommendations
-./bin/omg -T sqlserver -s localhost -d mydb -u user -p pass -t Orders --indexes
+./bin/dmg -T sqlserver -s localhost -d mydb -u user -p pass -t Orders --indexes
 ```
 
 #### With Custom Options
 ```bash
 # Generate with specific Rails version and test framework
-./bin/omg -T sqlserver -s localhost -d mydb -u user -p pass -t Products -r 7 -x rspec -o product.rb
+./bin/dmg -T sqlserver -s localhost -d mydb -u user -p pass -t Products -r 7 -x rspec -o product.rb
 ```
 
 ### Oracle Examples (Backward Compatible)
 
 ```bash
 # Traditional Oracle connection
-./bin/omg -T oracle -d localhost:1521/XE -u hr -p hr -t employees
+./bin/dmg -T oracle -d localhost:1521/XE -u hr -p hr -t employees
 
 # Auto-detect Oracle (no server specified)
-./bin/omg -d localhost:1521/XE -u scott -p tiger -t users
+./bin/dmg -d localhost:1521/XE -u scott -p tiger -t users
 ```
 
 ## Connection Parameters
@@ -318,12 +318,12 @@ production:
 ```bash
 # Generate models for multiple tables
 for table in Customers Orders Products; do
-  ./bin/omg -T sqlserver -s myserver -d mydb -u user -p pass -t $table
+  ./bin/dmg -T sqlserver -s myserver -d mydb -u user -p pass -t $table
 done
 
 # Generate only index recommendations for all tables
 for table in $(sqlcmd -Q "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES" -h-1); do
-  ./bin/omg -T sqlserver -s myserver -d mydb -u user -p pass -t $table --indexes
+  ./bin/dmg -T sqlserver -s myserver -d mydb -u user -p pass -t $table --indexes
 done
 ```
 
@@ -338,9 +338,9 @@ namespace :db do
 
     case config['adapter']
     when 'sqlserver'
-      system("./bin/omg -T sqlserver -s #{config['host']} -d #{config['database']} -u #{config['username']} -p #{config['password']} -t #{ENV['TABLE']}")
+      system("./bin/dmg -T sqlserver -s #{config['host']} -d #{config['database']} -u #{config['username']} -p #{config['password']} -t #{ENV['TABLE']}")
     when 'oracle_enhanced'
-      system("./bin/omg -T oracle -d #{config['database']} -u #{config['username']} -p #{config['password']} -t #{ENV['TABLE']}")
+      system("./bin/dmg -T oracle -d #{config['database']} -u #{config['username']} -p #{config['password']} -t #{ENV['TABLE']}")
     end
   end
 end
@@ -355,7 +355,7 @@ end
 #### SQL Server Connection
 ```bash
 # Connection timeout
-./bin/omg -T sqlserver -s myserver -d mydb -u user -p pass -t mytable
+./bin/dmg -T sqlserver -s myserver -d mydb -u user -p pass -t mytable
 # Error: TLS/SSL connection failed
 
 # Solution: Disable encryption for development
@@ -393,7 +393,7 @@ GRANT SELECT ON INFORMATION_SCHEMA.TABLE_CONSTRAINTS TO [username];
 Enable verbose output:
 ```bash
 # Set environment variable for debugging
-DEBUG=1 ./bin/omg -T sqlserver -s myserver -d mydb -u user -p pass -t mytable
+DEBUG=1 ./bin/dmg -T sqlserver -s myserver -d mydb -u user -p pass -t mytable
 ```
 
 ## Migration from Oracle-Only Version
@@ -432,11 +432,11 @@ omg = DatabaseModel::Generator.new(connection, type: :oracle)
 3. **Use new CLI options**:
    ```bash
    # Old Oracle-specific
-   ./bin/omg -d oracle_db -u user -p pass -t table
+   ./bin/dmg -d oracle_db -u user -p pass -t table
 
    # New database-agnostic
-   ./bin/omg -T oracle -d oracle_db -u user -p pass -t table
-   ./bin/omg -T sqlserver -s sql_server -d sql_db -u user -p pass -t table
+   ./bin/dmg -T oracle -d oracle_db -u user -p pass -t table
+   ./bin/dmg -T sqlserver -s sql_server -d sql_db -u user -p pass -t table
    ```
 
 ## Contributing
@@ -467,7 +467,7 @@ To add support for additional databases (PostgreSQL, MySQL, etc.):
 
 3. **Update CLI support**:
    ```ruby
-   # bin/omg - add new connection logic
+   # bin/dmg - add new connection logic
    ```
 
 The modular architecture makes adding new database support straightforward while maintaining existing functionality.

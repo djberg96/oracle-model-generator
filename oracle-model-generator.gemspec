@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.files       = Dir['**/*'].reject{ |f| f.include?('git') }
   spec.cert_chain  = spec.cert_chain = ['certs/djberg96_pub.pem']
 
-  spec.executables = "omg"
+  spec.executables = "dmg"
 
   spec.add_dependency('ruby-oci8', '~> 2.2')
   spec.add_dependency('getopt', '~> 1.6')

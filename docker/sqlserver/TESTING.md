@@ -57,7 +57,7 @@ docker exec sqlserver_test /opt/mssql-tools/bin/sqlcmd \
   -Q "CREATE DATABASE test_db"
 
 # 4. Test the generator
-ruby bin/omg -T sqlserver -s localhost -P 1433 -d test_db \
+ruby bin/dmg -T sqlserver -s localhost -P 1433 -d test_db \
   -u sa -p 'YourStrong!Passw0rd' -t sys.tables -x rspec
 
 # 5. Clean up

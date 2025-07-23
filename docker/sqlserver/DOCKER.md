@@ -48,7 +48,7 @@ bundle exec ruby test/docker_environment_test.rb
 bundle exec ruby test/test_oracle_model_generator.rb
 
 # Test the command-line tool
-bundle exec ruby -Ilib bin/omg --help
+bundle exec ruby -Ilib bin/dmg --help
 
 # Interactive Ruby with the library loaded
 irb -I lib -r oracle/model/generator
