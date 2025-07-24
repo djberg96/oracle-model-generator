@@ -67,7 +67,9 @@ jobs:
 
         # Create symlinks for compatibility
         sudo mkdir -p /usr/lib/oracle/19/client64
-        sudo ln -sf /opt/oracle/instantclient_19_8 /usr/lib/oracle/19/client64/lib    - name: Install gems
+        sudo ln -sf /opt/oracle/instantclient_19_8 /usr/lib/oracle/19/client64/lib
+
+    - name: Install gems
       run: |
         # Set up Oracle environment for gem compilation
         export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_8
