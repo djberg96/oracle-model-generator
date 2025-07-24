@@ -23,8 +23,11 @@ Using the command line tool:
 `dmg -T sqlserver -s localhost -d your_database -t locations -u sa -p your_password`
 
 ### Auto-detection:
-`dmg -d your_database -t locations -u some_user -p some_password`  # Oracle (default)
-`dmg -s localhost -d your_database -t locations -u sa -p password`  # SQL Server (detected)
+# Oracle (default)
+`dmg -d your_database -t locations -u some_user -p some_password`
+
+# SQL Server (detected)
+`dmg -s localhost -d your_database -t locations -u sa -p password`
 
 The above command results in a file called "location.rb". This is an
 ActiveRecord model declaration, with all validations, primary keys,
