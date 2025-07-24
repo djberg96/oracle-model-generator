@@ -59,6 +59,11 @@ jobs:
         echo "/opt/oracle/instantclient_12_2" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
 
+        # Create required symbolic links
+        cd /opt/oracle/instantclient_12_2
+        sudo ln -sf libclntsh.so.12.1 libclntsh.so
+        sudo ln -sf libocci.so.12.1 libocci.so
+
         # Verify installation
         ls -la /opt/oracle/instantclient_12_2/
 
