@@ -1,7 +1,7 @@
 # Load the library we're testing
-require_relative '../lib/oracle-model-generator'
+require_relative '../lib/database_model_generator'
 
-# RSpec configuration for Oracle Model Generator
+# RSpec configuration for Database Model Generator
 RSpec.configure do |config|
   # Use the expect() syntax rather than should syntax
   config.expect_with :rspec do |expectations|
@@ -18,6 +18,12 @@ RSpec.configure do |config|
 
   # Use documentation format for output
   config.formatter = :documentation
+
+  # Skip tests if database connection fails
+  config.before(:suite) do
+    database_type = ENV['DATABASE_TYPE'] || 'oracle'
+    puts "Running tests with #{database_type} database"
+  end
 
   # Run specs in random order to surface order dependencies
   config.order = :random
