@@ -16,7 +16,7 @@ jobs:
 
     services:
       oracle:
-        image: gvenzl/oracle-xe:21-slim
+        image: gvenzl/oracle-free:23-slim
         env:
           ORACLE_PASSWORD: oracle
           APP_USER: hr
@@ -31,6 +31,20 @@ jobs:
           --health-start-period=120s
           --shm-size=1g
 
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: YourStrong@Passw0rd
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -Q 'SELECT 1'"
+          --health-interval=10s
+          --health-timeout=3s
+          --health-retries=10
+          --health-start-period=10s
+
     steps:
     - uses: actions/checkout@v4
 
@@ -38,72 +52,52 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby-version }}
-        bundler-cache: false
+        bundler-cache: true
 
     - name: Install Oracle Instant Client
       run: |
         sudo apt-get update
-        sudo apt-get install -y libaio1t64 wget unzip freetds-dev
+        sudo apt-get install -y libaio1t64 alien
 
-        # Use a simpler approach with pre-built packages
-        # Download older, more compatible Oracle Instant Client 12.2
-        wget https://github.com/bumpx/oracle-instantclient/raw/master/instantclient-basic-linux.x64-12.2.0.1.0.zip
-        wget https://github.com/bumpx/oracle-instantclient/raw/master/instantclient-sdk-linux.x64-12.2.0.1.0.zip
+        # Download Oracle Instant Client
+        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/oracle-instantclient-basic-23.4.0.24.05-1.el9.x86_64.rpm
+        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/oracle-instantclient-devel-23.4.0.24.05-1.el9.x86_64.rpm
 
-        # Extract to /opt/oracle
-        sudo mkdir -p /opt/oracle
-        sudo unzip -o instantclient-basic-linux.x64-12.2.0.1.0.zip -d /opt/oracle/
-        sudo unzip -o instantclient-sdk-linux.x64-12.2.0.1.0.zip -d /opt/oracle/
+        # Convert RPM to DEB and install
+        sudo alien -i oracle-instantclient-basic-23.4.0.24.05-1.el9.x86_64.rpm
+        sudo alien -i oracle-instantclient-devel-23.4.0.24.05-1.el9.x86_64.rpm
 
-        # Set up library configuration
-        echo "/opt/oracle/instantclient_12_2" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+        # Set up environment
+        echo "/usr/lib/oracle/23/client64/lib" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
 
-        # Create required symbolic links
-        cd /opt/oracle/instantclient_12_2
-        sudo ln -sf libclntsh.so.12.1 libclntsh.so
-        sudo ln -sf libocci.so.12.1 libocci.so
-
-        # Verify installation
-        ls -la /opt/oracle/instantclient_12_2/
-
-        # Check SDK installation
-        find /opt/oracle -name "oci.h" -type f
-        ls -la /opt/oracle/instantclient_12_2/sdk/ || echo "No sdk directory"
-
-        # Create symlinks for compatibility
-        sudo mkdir -p /usr/lib/oracle/12.2/client64
-        sudo ln -sf /opt/oracle/instantclient_12_2 /usr/lib/oracle/12.2/client64/lib
+    - name: Install FreeTDS for SQL Server
+      run: |
+        sudo apt-get install -y freetds-dev
 
     - name: Install gems
-      run: |
-        # Set up Oracle environment for gem compilation
-        export LD_LIBRARY_PATH=/opt/oracle/instantclient_12_2
-        export ORACLE_HOME=/opt/oracle/instantclient_12_2
-        export PATH=$ORACLE_HOME:$PATH
-
-        # Verify Oracle files are present
-        ls -la /opt/oracle/instantclient_12_2/libclntsh.so*
-
-        # Find and verify oci.h location
-        find /opt/oracle -name "oci.h" -type f
-
-        # Install gems with explicit Oracle configuration
-        # Note: ruby-oci8 expects the lib files to be directly in the instant client directory
-        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_12_2 --with-instant-client-lib=/opt/oracle/instantclient_12_2 --with-instant-client-include=/opt/oracle/instantclient_12_2/sdk/include
-        bundle install
+      run: bundle install
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_12_2
-        ORACLE_HOME: /opt/oracle/instantclient_12_2
+        LD_LIBRARY_PATH: /usr/lib/oracle/23/client64/lib
+        ORACLE_HOME: /usr/lib/oracle/23/client64
 
-    - name: Run specs
-      run: bundle exec rspec spec/database_model_generator_spec.rb
+    - name: Run Oracle specs
+      run: bundle exec rspec
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_12_2
-        ORACLE_HOME: /opt/oracle/instantclient_12_2
+        LD_LIBRARY_PATH: /usr/lib/oracle/23/client64/lib
+        ORACLE_HOME: /usr/lib/oracle/23/client64
         DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
-        ORACLE_SID: XE
+        ORACLE_SID: FREE
         ORACLE_USER: hr
         ORACLE_PASSWORD: hr
+
+    - name: Run SQL Server specs
+      run: bundle exec rspec
+      env:
+        DATABASE_TYPE: sqlserver
+        SQLSERVER_HOST: localhost
+        SQLSERVER_PORT: 1433
+        SQLSERVER_USER: sa
+        SQLSERVER_PASSWORD: YourStrong@Passw0rd
