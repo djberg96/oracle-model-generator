@@ -16,7 +16,7 @@ jobs:
 
     services:
       oracle:
-        image: gvenzl/oracle-free:23-slim
+        image: gvenzl/oracle-xe:21-slim
         env:
           ORACLE_PASSWORD: oracle
           APP_USER: hr
@@ -45,9 +45,9 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libaio-dev wget unzip freetds-dev
 
-        # Download Oracle Instant Client ZIP files (using 19.8 for better compatibility)
-        wget https://download.oracle.com/otn_software/linux/instantclient/1980000/instantclient-basic-linux.x64-19.8.0.0.0dbru.zip
-        wget https://download.oracle.com/otn_software/linux/instantclient/1980000/instantclient-sdk-linux.x64-19.8.0.0.0dbru.zip
+        # Download Oracle Instant Client ZIP files (using 19.8 for XE compatibility)
+        wget https://download.oracle.com/otn_software/linux/instantclient/198000/instantclient-basic-linux.x64-19.8.0.0.0dbru.zip
+        wget https://download.oracle.com/otn_software/linux/instantclient/198000/instantclient-sdk-linux.x64-19.8.0.0.0dbru.zip
 
         # Extract to /opt/oracle
         sudo mkdir -p /opt/oracle
@@ -98,6 +98,6 @@ jobs:
         DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
-        ORACLE_SID: FREE
+        ORACLE_SID: XE
         ORACLE_USER: hr
         ORACLE_PASSWORD: hr
