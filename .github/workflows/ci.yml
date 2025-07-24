@@ -43,62 +43,59 @@ jobs:
     - name: Install Oracle Instant Client
       run: |
         sudo apt-get update
-        sudo apt-get install -y libaio-dev wget unzip freetds-dev
+        sudo apt-get install -y libaio1 wget unzip freetds-dev
 
-        # Add Oracle APT repository and install Instant Client
-        wget -O- https://yum.oracle.com/RPM-GPG-KEY-oracle-ol6 | sudo apt-key add -
-        echo "deb http://yum.oracle.com/repo/OracleLinux/OL6/oracle/instantclient/x86_64/ /" | sudo tee /etc/apt/sources.list.d/oracle-instantclient.list
-
-        # Alternative: Download directly from Oracle with curl (bypassing potential wget issues)
-        curl -o instantclient-basic.zip https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-basic-linux.x64-23.4.0.24.05.zip
-        curl -o instantclient-sdk.zip https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-sdk-linux.x64-23.4.0.24.05.zip
+        # Use a simpler approach with pre-built packages
+        # Download older, more compatible Oracle Instant Client 12.2
+        wget https://github.com/bumpx/oracle-instantclient/raw/master/instantclient-basic-linux.x64-12.2.0.1.0.zip
+        wget https://github.com/bumpx/oracle-instantclient/raw/master/instantclient-sdk-linux.x64-12.2.0.1.0.zip
 
         # Extract to /opt/oracle
         sudo mkdir -p /opt/oracle
-        sudo unzip -o instantclient-basic.zip -d /opt/oracle/
-        sudo unzip -o instantclient-sdk.zip -d /opt/oracle/
+        sudo unzip -o instantclient-basic-linux.x64-12.2.0.1.0.zip -d /opt/oracle/
+        sudo unzip -o instantclient-sdk-linux.x64-12.2.0.1.0.zip -d /opt/oracle/
 
         # Set up library configuration
-        echo "/opt/oracle/instantclient_23_4" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+        echo "/opt/oracle/instantclient_12_2" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
 
         # Verify installation
-        ls -la /opt/oracle/instantclient_23_4/
+        ls -la /opt/oracle/instantclient_12_2/
 
         # Check SDK installation
         find /opt/oracle -name "oci.h" -type f
-        ls -la /opt/oracle/instantclient_23_4/sdk/ || echo "No sdk directory"
+        ls -la /opt/oracle/instantclient_12_2/sdk/ || echo "No sdk directory"
 
         # Create symlinks for compatibility
-        sudo mkdir -p /usr/lib/oracle/23/client64
-        sudo ln -sf /opt/oracle/instantclient_23_4 /usr/lib/oracle/23/client64/lib
+        sudo mkdir -p /usr/lib/oracle/12.2/client64
+        sudo ln -sf /opt/oracle/instantclient_12_2 /usr/lib/oracle/12.2/client64/lib
 
     - name: Install gems
       run: |
         # Set up Oracle environment for gem compilation
-        export LD_LIBRARY_PATH=/opt/oracle/instantclient_23_4
-        export ORACLE_HOME=/opt/oracle/instantclient_23_4
+        export LD_LIBRARY_PATH=/opt/oracle/instantclient_12_2
+        export ORACLE_HOME=/opt/oracle/instantclient_12_2
         export PATH=$ORACLE_HOME:$PATH
 
         # Verify Oracle files are present
-        ls -la /opt/oracle/instantclient_23_4/libclntsh.so*
+        ls -la /opt/oracle/instantclient_12_2/libclntsh.so*
 
         # Find and verify oci.h location
         find /opt/oracle -name "oci.h" -type f
 
         # Install gems with explicit Oracle configuration
         # Note: ruby-oci8 expects the lib files to be directly in the instant client directory
-        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4 --with-instant-client-lib=/opt/oracle/instantclient_23_4 --with-instant-client-include=/opt/oracle/instantclient_23_4/sdk/include
+        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_12_2 --with-instant-client-lib=/opt/oracle/instantclient_12_2 --with-instant-client-include=/opt/oracle/instantclient_12_2/sdk/include
         bundle install
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
-        ORACLE_HOME: /opt/oracle/instantclient_23_4
+        LD_LIBRARY_PATH: /opt/oracle/instantclient_12_2
+        ORACLE_HOME: /opt/oracle/instantclient_12_2
 
     - name: Run specs
       run: bundle exec rspec spec/database_model_generator_spec.rb
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
-        ORACLE_HOME: /opt/oracle/instantclient_23_4
+        LD_LIBRARY_PATH: /opt/oracle/instantclient_12_2
+        ORACLE_HOME: /opt/oracle/instantclient_12_2
         DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
