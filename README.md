@@ -112,13 +112,14 @@ end
 ```
 
 ## Requirements
-**For Oracle:**
-* ruby-oci8
 * getopt
+* One of the following gems, depending on which vendor you're using.
 
-**For SQL Server:**
+### Oracle
+* ruby-oci8
+
+### SQLServer
 * tiny_tds
-* getopt
 
 ## Running the specs
 ### Oracle:
