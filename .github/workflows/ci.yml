@@ -61,6 +61,10 @@ jobs:
         # Verify installation
         ls -la /opt/oracle/instantclient_23_4/
 
+        # Check SDK installation
+        find /opt/oracle -name "oci.h" -type f
+        ls -la /opt/oracle/instantclient_23_4/sdk/ || echo "No sdk directory"
+
         # Create symlinks for compatibility
         sudo mkdir -p /usr/lib/oracle/23/client64
         sudo ln -sf /opt/oracle/instantclient_23_4 /usr/lib/oracle/23/client64/lib
@@ -75,9 +79,12 @@ jobs:
         # Verify Oracle files are present
         ls -la /opt/oracle/instantclient_23_4/libclntsh.so*
 
+        # Find and verify oci.h location
+        find /opt/oracle -name "oci.h" -type f
+
         # Install gems with explicit Oracle configuration
         # Note: ruby-oci8 expects the lib files to be directly in the instant client directory
-        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4 --with-instant-client-lib=/opt/oracle/instantclient_23_4
+        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4 --with-instant-client-lib=/opt/oracle/instantclient_23_4 --with-instant-client-include=/opt/oracle/instantclient_23_4/sdk/include
         bundle install
       env:
         LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
