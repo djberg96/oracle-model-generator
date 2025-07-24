@@ -43,7 +43,7 @@ jobs:
     - name: Install Oracle Instant Client
       run: |
         sudo apt-get update
-        sudo apt-get install -y libaio1 wget unzip freetds-dev
+        sudo apt-get install -y libaio1t64 wget unzip freetds-dev
 
         # Use a simpler approach with pre-built packages
         # Download older, more compatible Oracle Instant Client 12.2
