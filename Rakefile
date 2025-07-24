@@ -13,17 +13,17 @@ desc 'Run RSpec tests'
 task :rspec => :spec
 
 namespace 'gem' do
-  desc 'Create the oracle-model-generator gem'
+  desc 'Create the database-model-generator gem'
   task :create => :clean do
     require 'rubygems/package'
-    spec = Gem::Specification.load('oracle-model-generator.gemspec')
+    spec = Gem::Specification.load('database-model-generator.gemspec')
     spec.signing_key = File.join(Dir.home, '.ssh', 'gem-private_key.pem')
     Gem::Package.build(spec)
   end
 
-  desc 'Install the oracle-model-generator gem'
+  desc 'Install the database-model-generator gem'
   task :install => [:create] do
-    file = Dir["oracle-model-generator*.gem"].last
+    file = Dir["database-model-generator*.gem"].last
     sh "gem install -l #{file}"
   end
 end
