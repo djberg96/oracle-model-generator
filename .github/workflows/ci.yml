@@ -45,56 +45,54 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libaio-dev wget unzip freetds-dev
 
-        # Download Oracle Instant Client ZIP files (simpler approach)
-        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-basic-linux.x64-23.4.0.24.05.zip
-        wget https://download.oracle.com/otn_software/linux/instantclient/2340000/instantclient-sdk-linux.x64-23.4.0.24.05.zip
+        # Download Oracle Instant Client ZIP files (using 19.8 for better compatibility)
+        wget https://download.oracle.com/otn_software/linux/instantclient/1980000/instantclient-basic-linux.x64-19.8.0.0.0dbru.zip
+        wget https://download.oracle.com/otn_software/linux/instantclient/1980000/instantclient-sdk-linux.x64-19.8.0.0.0dbru.zip
 
         # Extract to /opt/oracle
         sudo mkdir -p /opt/oracle
-        sudo unzip -o instantclient-basic-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
-        sudo unzip -o instantclient-sdk-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
+        sudo unzip -o instantclient-basic-linux.x64-19.8.0.0.0dbru.zip -d /opt/oracle/
+        sudo unzip -o instantclient-sdk-linux.x64-19.8.0.0.0dbru.zip -d /opt/oracle/
 
         # Set up library configuration
-        echo "/opt/oracle/instantclient_23_4" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
+        echo "/opt/oracle/instantclient_19_8" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
         sudo ldconfig
 
         # Verify installation
-        ls -la /opt/oracle/instantclient_23_4/
+        ls -la /opt/oracle/instantclient_19_8/
 
         # Check SDK installation
         find /opt/oracle -name "oci.h" -type f
-        ls -la /opt/oracle/instantclient_23_4/sdk/ || echo "No sdk directory"
+        ls -la /opt/oracle/instantclient_19_8/sdk/ || echo "No sdk directory"
 
         # Create symlinks for compatibility
-        sudo mkdir -p /usr/lib/oracle/23/client64
-        sudo ln -sf /opt/oracle/instantclient_23_4 /usr/lib/oracle/23/client64/lib
-
-    - name: Install gems
+        sudo mkdir -p /usr/lib/oracle/19/client64
+        sudo ln -sf /opt/oracle/instantclient_19_8 /usr/lib/oracle/19/client64/lib    - name: Install gems
       run: |
         # Set up Oracle environment for gem compilation
-        export LD_LIBRARY_PATH=/opt/oracle/instantclient_23_4
-        export ORACLE_HOME=/opt/oracle/instantclient_23_4
+        export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_8
+        export ORACLE_HOME=/opt/oracle/instantclient_19_8
         export PATH=$ORACLE_HOME:$PATH
 
         # Verify Oracle files are present
-        ls -la /opt/oracle/instantclient_23_4/libclntsh.so*
+        ls -la /opt/oracle/instantclient_19_8/libclntsh.so*
 
         # Find and verify oci.h location
         find /opt/oracle -name "oci.h" -type f
 
         # Install gems with explicit Oracle configuration
         # Note: ruby-oci8 expects the lib files to be directly in the instant client directory
-        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4 --with-instant-client-lib=/opt/oracle/instantclient_23_4 --with-instant-client-include=/opt/oracle/instantclient_23_4/sdk/include
+        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_19_8 --with-instant-client-lib=/opt/oracle/instantclient_19_8 --with-instant-client-include=/opt/oracle/instantclient_19_8/sdk/include
         bundle install
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
-        ORACLE_HOME: /opt/oracle/instantclient_23_4
+        LD_LIBRARY_PATH: /opt/oracle/instantclient_19_8
+        ORACLE_HOME: /opt/oracle/instantclient_19_8
 
     - name: Run specs
       run: bundle exec rspec spec/database_model_generator_spec.rb
       env:
-        LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
-        ORACLE_HOME: /opt/oracle/instantclient_23_4
+        LD_LIBRARY_PATH: /opt/oracle/instantclient_19_8
+        ORACLE_HOME: /opt/oracle/instantclient_19_8
         DATABASE_TYPE: oracle
         ORACLE_HOST: localhost
         ORACLE_PORT: 1521
