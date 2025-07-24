@@ -1,5 +1,7 @@
-## 0.6.0 - ???
+## 0.6.0 - 24-Jul-2025
 * Renamed from oracle-model-generator to database-model-generator.
+* Added enum support.
+* Added polymorphic association support.
 
 ## 0.5.0 - 22-Jul-2025
 * Added docker related files, so you can now fire up an Oracle container and
