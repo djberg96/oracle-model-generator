@@ -1,13 +1,17 @@
-# MAINTAINER WANTED
-
-As of 2019 I haven't used Oracle or this library for many years. I would like
-to turn it over to someone who is. If you are interested please contact me,
-and we can discuss transferring the repository.
-
 ## Description
 A library for generating an ActiveRecord model from an existing database table.
-Supports both Oracle and SQL Server databases.
-This will install a "dmg" (Database Model Generator) executable that you can use from the command line.
+
+Currently supports both Oracle and SQL Server databases.
+
+This will install a "dmg" (Database Model Generator) executable that you can
+use from the command line.
+
+## Renamed
+Originally called "oracle-model-generator" and put into the dust bin, I've
+decided to revive this library with the help of AI. Specifically, I've added
+SQLServer support, and plan to Postgres support.
+
+I also plan on lots of improvements, and some general refactoring.
 
 ## Synopsis
 Using the command line tool:
@@ -120,11 +124,13 @@ end
 ### Oracle:
 Run `cd docker/oracle && docker-compose run --rm oracle-model-generator bundle exec rspec`.
 
+You may need to use sudo. No guarantees on MacOS because of known issues
+with database client libraries.
+
 ### SQL Server:
 Run `cd docker/sqlserver && ./test.sh` to start SQL Server, then run tests.
 
-You may need to use sudo. No guarantees on MacOS because of known issues
-with database client libraries.
+Again, no guarantees on MacOS.
 
 ## Optional Libraries
 If you want to be able to avoid specifying a username and password on the
@@ -136,21 +142,6 @@ need to install the `composite_primary_keys` library.
 If you want date format validations, then you will need to install the
 `validates_timeliness` library.
 
-## What this library doesn't do
-I do not attempt to set `has_many` or `has_one` relationships. There's no good
-way to determine that relationship (one or many?). Besides, in practice I
-find that most people set custom has_xxx relationships that go over and
-above what's set in the database anyway for purposes of their
-application.
-
-I also do not go out of my way to get the model name correct with regards
-to singular vs plural. I do a simple guess that covers most cases, but
-complex cases will break it. It's much easier for you to rename a class or
-file name than it is for me to get this 100% correct.
-
-As of 0.3.1 there's also the `--class` option that let's you explicitly
-set it if you like.
-
 ## Database Support
 * **Oracle**: Full support via ruby-oci8
 * **SQL Server**: Full support via tiny_tds
@@ -158,10 +149,8 @@ set it if you like.
 
 ## Author's Comments
 Originally focused only on Oracle, this library has been expanded to support
-SQL Server as well. The architecture now supports multiple database vendors
-while maintaining backward compatibility. By supporting specific database
-vendors (Oracle and SQL Server), we can take advantage of database-specific
-features and optimizations.
+SQL Server as well. The architecture now supports multiple database vendors,
+and I will probably add Postgres support in the future.
 
 ## Current Features
 * **Multi-database support**: Oracle and SQL Server
@@ -172,16 +161,13 @@ features and optimizations.
 
 ## Future Plans (originally)
 * Add support for views.
-* Add automatic test suite generation for rspec.
-* Explicitly set :foreign_key if using CPK in belongs_to relationships.
-* The output could use a little formatting love.
 
 ## Acknowlegements
 Thanks go to Daniel Luna for his --class patch.
 
 ## Known Issues
 None known. If you find any issues, please report them on the github project
-page at http://www.github.com/djberg96/oracle-model-generator.
+page at http://www.github.com/djberg96/database-model-generator.
 
 ## Warranty
 This package is provided "as is" and without any express or
