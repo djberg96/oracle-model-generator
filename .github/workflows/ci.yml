@@ -72,8 +72,12 @@ jobs:
         export ORACLE_HOME=/opt/oracle/instantclient_23_4
         export PATH=$ORACLE_HOME:$PATH
 
+        # Verify Oracle files are present
+        ls -la /opt/oracle/instantclient_23_4/libclntsh.so*
+
         # Install gems with explicit Oracle configuration
-        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4
+        # Note: ruby-oci8 expects the lib files to be directly in the instant client directory
+        bundle config build.ruby-oci8 --with-instant-client-dir=/opt/oracle/instantclient_23_4 --with-instant-client-lib=/opt/oracle/instantclient_23_4
         bundle install
       env:
         LD_LIBRARY_PATH: /opt/oracle/instantclient_23_4
