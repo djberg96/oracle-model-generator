@@ -9,7 +9,7 @@ use from the command line.
 ## Renamed
 Originally called "oracle-model-generator" and put into the dust bin, I've
 decided to revive this library with the help of AI. Specifically, I've added
-SQLServer support, and plan to Postgres support.
+SQLServer support, and plan to add Postgres support.
 
 I also plan on lots of improvements, and some general refactoring.
 
