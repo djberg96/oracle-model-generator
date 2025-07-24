@@ -62,6 +62,7 @@ jobs:
         ls -la /opt/oracle/instantclient_23_4/
 
         # Create symlinks for compatibility
+        sudo mkdir -p /usr/lib/oracle/23/client64
         sudo ln -sf /opt/oracle/instantclient_23_4 /usr/lib/oracle/23/client64/lib
 
     - name: Install gems
