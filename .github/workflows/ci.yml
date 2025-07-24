@@ -51,8 +51,8 @@ jobs:
 
         # Extract to /opt/oracle
         sudo mkdir -p /opt/oracle
-        sudo unzip instantclient-basic-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
-        sudo unzip instantclient-sdk-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
+        sudo unzip -o instantclient-basic-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
+        sudo unzip -o instantclient-sdk-linux.x64-23.4.0.24.05.zip -d /opt/oracle/
 
         # Set up library configuration
         echo "/opt/oracle/instantclient_23_4" | sudo tee /etc/ld.so.conf.d/oracle-instantclient.conf
