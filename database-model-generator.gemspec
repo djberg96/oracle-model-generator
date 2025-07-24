@@ -12,11 +12,16 @@ Gem::Specification.new do |spec|
   spec.files       = Dir['**/*'].reject{ |f| f.include?('git') }
   spec.cert_chain  = spec.cert_chain = ['certs/djberg96_pub.pem']
 
-  spec.executables = "dmg"
+  spec.executables = 'dmg'
 
-  spec.add_dependency('ruby-oci8', '~> 2.2')
   spec.add_dependency('getopt', '~> 1.6')
+
+  # I do not require vendor-specific gems because I do not know which vendor
+  # you may or may not be using. However, I've added them as development
+  # dependencies for testing, and as a clue for you the reader.
   spec.add_development_dependency('rspec', '~> 3.12')
+  spec.add_development_dependency('ruby-oci8', '~> 2.2')
+  spec.add_development_dependency('tiny_tds', '~> 3.2.1')
 
   spec.description = <<-EOF
     The database-model-generator library allows you to generate an ActiveRecord
