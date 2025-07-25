@@ -404,13 +404,17 @@ File.open(ofile, 'w') do |fh|
   omg.column_info.each{ |col|
     data_type = col.data_type.to_s
 
-    if ['date', 'time'].include?(data_type)
+    if ['date', 'time', 'datetime'].include?(data_type)
       if data_type == 'date'
         validation = "validates_date :#{col.name.downcase}"
       end
 
       if data_type == 'timestamp'
         validation = "validates_time :#{col.name.downcase}"
+      end
+
+      if data_type == 'datetime'
+        validation = "validates_datetime :#{col.name.downcase}"
       end
 
       unless header_printed
