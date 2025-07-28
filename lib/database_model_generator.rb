@@ -13,7 +13,7 @@ end
 module DatabaseModel
   module Generator
     # The version of the database-model-generator library
-    VERSION = '0.6.0'
+    VERSION = '0.6.1'
 
     # Factory method to create the appropriate generator based on connection type
     def self.new(connection, options = {})
