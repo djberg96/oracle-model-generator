@@ -1,3 +1,7 @@
+## 0.6.1 - 28-Jul-2025
+* Added "datetime" field for validates_timeliness.
+* Added validates_timeliness as a development dependency.
+
 ## 0.6.0 - 24-Jul-2025
 * Renamed from oracle-model-generator to database-model-generator.
 * Added enum support.

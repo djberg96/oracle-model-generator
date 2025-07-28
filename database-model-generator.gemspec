@@ -23,6 +23,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency('ruby-oci8', '~> 2.2')
   spec.add_development_dependency('tiny_tds', '~> 3.2.1')
 
+  # Again, I only set this as a development dependency mainly as a reminder.
+  # The version you need will depend on which version of Rails you're using.
+  spec.add_development_dependency('validates_timeliness')
+
   spec.description = <<-EOF
     The database-model-generator library allows you to generate an ActiveRecord
     model from an existing Oracle table or view, as well as automatically
